@@ -1,0 +1,506 @@
+/**
+ * KickForge 303 - Web Audio DSP Synthesis Engine
+ * Con motore Super Botta (Punch Maximizer), 303 Acid Attack e Distorsione Hardcore Multi-Stadio
+ */
+
+export class KickSynthEngine {
+  constructor() {
+    this.ctx = null;
+    this.masterGainNode = null;
+    this.analyserNode = null;
+    this.isInitialized = false;
+
+    // Distortion Curve Caches
+    this.distortionCurves = new Map();
+    this.wavefoldCurves = new Map();
+  }
+
+  init() {
+    if (this.isInitialized) return;
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    this.ctx = new AudioContextClass({ latencyHint: "interactive" });
+
+    this.analyserNode = this.ctx.createAnalyser();
+    this.analyserNode.fftSize = 2048;
+    this.analyserNode.smoothingTimeConstant = 0.8;
+
+    this.masterGainNode = this.ctx.createGain();
+    this.masterGainNode.gain.value = 1.0;
+
+    this.masterGainNode.connect(this.analyserNode);
+    this.analyserNode.connect(this.ctx.destination);
+
+    this.isInitialized = true;
+  }
+
+  async resumeIfNeeded() {
+    if (!this.isInitialized) {
+      this.init();
+    }
+    if (this.ctx && this.ctx.state === "suspended") {
+      await this.ctx.resume();
+    }
+  }
+
+  // Curve di distorsione avanzate
+  getDistortionCurve(amount = 2, type = "tube") {
+    const key = `${type}_${amount.toFixed(2)}`;
+    if (this.distortionCurves.has(key)) {
+      return this.distortionCurves.get(key);
+    }
+
+    const n_samples = 44100;
+    const curve = new Float32Array(n_samples);
+    const deg = Math.PI / 180;
+    const k = Math.max(0.1, amount);
+
+    for (let i = 0; i < n_samples; ++i) {
+      const x = (i * 2) / n_samples - 1;
+
+      if (type === "tube") {
+        // Saturazione calda asimmetrica
+        const x_biased = x + 0.12 * x * x;
+        if (x_biased > 0) {
+          curve[i] = (1 - Math.exp(-k * x_biased)) / (1 - Math.exp(-k));
+        } else {
+          curve[i] = -((1 - Math.exp(k * x_biased)) / (1 - Math.exp(-k)));
+        }
+      } else if (type === "diode") {
+        // Mordente diodo per transienti acidi
+        const diode = Math.tanh(k * x) + 0.3 * Math.sin(Math.PI * x * (k * 0.4));
+        curve[i] = Math.max(-0.96, Math.min(0.96, diode / (1 + k * 0.18)));
+      } else {
+        // Hard clip violento
+        const hard = ((3 + k) * x * 22 * deg) / (Math.PI + k * Math.abs(x));
+        curve[i] = Math.max(-0.99, Math.min(0.99, hard * 0.65));
+      }
+    }
+
+    this.distortionCurves.set(key, curve);
+    return curve;
+  }
+
+  // Curva di Wavefolding (distorsione a piegatura d'onda)
+  getWavefoldCurve(amount = 1) {
+    const key = `fold_${amount.toFixed(2)}`;
+    if (this.wavefoldCurves.has(key)) {
+      return this.wavefoldCurves.get(key);
+    }
+
+    const n_samples = 44100;
+    const curve = new Float32Array(n_samples);
+    const k = amount;
+
+    for (let i = 0; i < n_samples; i++) {
+      const x = (i * 2) / n_samples - 1;
+      if (k <= 1.0) {
+        curve[i] = x;
+      } else {
+        curve[i] = Math.sin(x * Math.PI * 0.5 * k);
+      }
+    }
+
+    this.wavefoldCurves.set(key, curve);
+    return curve;
+  }
+
+  /**
+   * Costruzione del circuito audio del kick
+   */
+  buildKickVoice(targetCtx, destination, params, startTime = 0, velocity = 1.0) {
+    const t0 = startTime;
+    const now = t0;
+
+    // Bus sommattore dei layer
+    const layerBus = targetCtx.createGain();
+    
+    // Moltiplicatore "SUPER BOTTA" (Punch Maximizer)
+    const superBotta = Math.max(1.0, params.super_botta || 1.0);
+    const extremeMode = params.extreme_mode ? 1.4 : 1.0;
+    layerBus.gain.value = velocity * extremeMode;
+
+    const punchDecay = Math.max(0.01, params.body_punchDecay || 0.035);
+    const tailDecay = Math.max(0.05, params.body_tailDecay || 0.3);
+    const totalKickDuration = punchDecay + tailDecay + 0.2;
+
+    // ==========================================
+    // LAYER 1: ATTACCO 303 & FISCHIO ACIDO
+    // ==========================================
+    if (params.attack303_enabled) {
+      const attackGain = targetCtx.createGain();
+      const attVol = (params.attack303_volume || 0.8) * 0.9 * (1 + (superBotta - 1) * 0.3);
+      attackGain.gain.setValueAtTime(0, now);
+      attackGain.gain.linearRampToValueAtTime(attVol, now + 0.001);
+
+      const attDecay = Math.max(0.01, params.attack303_decay || 0.04);
+      attackGain.gain.exponentialRampToValueAtTime(0.0001, now + attDecay);
+
+      const osc303 = targetCtx.createOscillator();
+      const waveType = params.attack303_waveform || "sawtooth";
+      osc303.type = waveType === "pulse" ? "square" : waveType;
+
+      const base303Pitch = params.attack303_pitch || 350;
+      osc303.frequency.setValueAtTime(base303Pitch * 2.8, now);
+      osc303.frequency.exponentialRampToValueAtTime(base303Pitch * 0.6, now + attDecay * 0.8);
+
+      // Filtro risonante stile Roland TB-303
+      const filter303 = targetCtx.createBiquadFilter();
+      filter303.type = "lowpass";
+      const baseCutoff = Math.max(100, params.attack303_cutoff || 2800);
+      const res = Math.min(24, Math.max(1, params.attack303_resonance || 14));
+      filter303.Q.setValueAtTime(res, now);
+
+      const envMod = params.attack303_envMod || 0.85;
+      const peakCutoff = Math.min(19000, baseCutoff + envMod * 10000);
+      filter303.frequency.setValueAtTime(peakCutoff, now);
+      filter303.frequency.exponentialRampToValueAtTime(Math.max(60, baseCutoff * 0.12), now + attDecay);
+
+      // Pre-Drive saturatore acido
+      const drive303 = targetCtx.createWaveShaper();
+      const driveAmt = Math.max(1, (params.attack303_drive || 4.0) * (1 + (superBotta - 1) * 0.25));
+      drive303.curve = this.getDistortionCurve(driveAmt, "diode");
+      drive303.oversample = "2x";
+
+      osc303.connect(drive303);
+      drive303.connect(filter303);
+      filter303.connect(attackGain);
+      attackGain.connect(layerBus);
+
+      osc303.start(now);
+      osc303.stop(now + attDecay + 0.05);
+
+      // Schiocco iniziale (Click / Snap)
+      if ((params.click_volume || 0.7) > 0.01) {
+        const clickOsc = targetCtx.createOscillator();
+        const clickGain = targetCtx.createGain();
+        const clickTone = params.click_tone || 6500;
+
+        clickOsc.type = "triangle";
+        clickOsc.frequency.setValueAtTime(clickTone, now);
+        clickOsc.frequency.exponentialRampToValueAtTime(80, now + 0.007);
+
+        const clickVol = (params.click_volume || 0.7) * (1 + (superBotta - 1) * 0.4);
+        clickGain.gain.setValueAtTime(clickVol, now);
+        clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.008);
+
+        clickOsc.connect(clickGain);
+        clickGain.connect(layerBus);
+
+        clickOsc.start(now);
+        clickOsc.stop(now + 0.02);
+      }
+    }
+
+    // ==========================================
+    // LAYER 2: CORPO & BOTTA PRINCIPALE (Sweep Pitch)
+    // ==========================================
+    if (params.body_enabled) {
+      const bodyGain = targetCtx.createGain();
+      const bodyVol = (params.body_volume || 1.0) * (1 + (superBotta - 1) * 0.35);
+      bodyGain.gain.setValueAtTime(0.0001, now);
+      bodyGain.gain.linearRampToValueAtTime(bodyVol, now + 0.0015);
+      bodyGain.gain.setValueAtTime(bodyVol, now + punchDecay * 0.55);
+      bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + punchDecay + tailDecay);
+
+      const bodyOsc = targetCtx.createOscillator();
+      const bodyWave = params.body_waveform || "sine";
+      bodyOsc.type = bodyWave;
+
+      // Inviluppo di Pitch a 3 stadi
+      const startFreq = (params.body_startFreq || 480) * (1 + (superBotta - 1) * 0.2);
+      const punchFreq = params.body_punchFreq || 150;
+      const tailFreq = params.body_tailFreq || 50;
+
+      bodyOsc.frequency.setValueAtTime(startFreq, now);
+      bodyOsc.frequency.exponentialRampToValueAtTime(Math.max(20, punchFreq), now + punchDecay);
+      bodyOsc.frequency.exponentialRampToValueAtTime(Math.max(20, tailFreq), now + punchDecay + tailDecay);
+
+      // Modulazione FM Metallica
+      if ((params.fm_amount || 0) > 5) {
+        const fmOsc = targetCtx.createOscillator();
+        const fmGain = targetCtx.createGain();
+        const fmRatio = params.fm_ratio || 2.0;
+
+        fmOsc.type = "sine";
+        fmOsc.frequency.setValueAtTime(tailFreq * fmRatio, now);
+        fmOsc.frequency.exponentialRampToValueAtTime(tailFreq, now + punchDecay);
+
+        fmGain.gain.setValueAtTime(params.fm_amount * (1 + (superBotta - 1) * 0.25), now);
+        fmGain.gain.exponentialRampToValueAtTime(0.1, now + punchDecay * 1.6);
+
+        fmOsc.connect(fmGain);
+        fmGain.connect(bodyOsc.frequency);
+
+        fmOsc.start(now);
+        fmOsc.stop(now + punchDecay + 0.05);
+      }
+
+      bodyOsc.connect(bodyGain);
+      bodyGain.connect(layerBus);
+
+      bodyOsc.start(now);
+      bodyOsc.stop(now + punchDecay + tailDecay + 0.05);
+    }
+
+    // ==========================================
+    // LAYER 3: BASSI SUB & RIMBOMBO WAREHOUSE
+    // ==========================================
+    if (params.rumble_enabled && (params.rumble_volume || 0) > 0.01) {
+      const rumbleGain = targetCtx.createGain();
+      const rVol = params.rumble_volume || 0.5;
+      const rDecay = Math.max(0.1, params.rumble_decay || 0.35);
+      const rDuck = Math.min(0.95, params.rumble_ducking || 0.8);
+
+      rumbleGain.gain.setValueAtTime(rVol * (1 - rDuck), now);
+      rumbleGain.gain.linearRampToValueAtTime(rVol * (1 - rDuck), now + 0.025);
+      rumbleGain.gain.linearRampToValueAtTime(rVol, now + 0.055);
+      rumbleGain.gain.exponentialRampToValueAtTime(0.0001, now + rDecay + 0.1);
+
+      const subOsc = targetCtx.createOscillator();
+      subOsc.type = "sine";
+      const tailF = params.body_tailFreq || 45;
+      subOsc.frequency.setValueAtTime(tailF, now);
+
+      const rumbleFilter = targetCtx.createBiquadFilter();
+      rumbleFilter.type = "lowpass";
+      rumbleFilter.frequency.setValueAtTime(params.rumble_cutoff || 120, now);
+      rumbleFilter.Q.setValueAtTime(2.2, now);
+
+      const noiseBuffer = targetCtx.createBuffer(1, targetCtx.sampleRate * (rDecay + 0.2), targetCtx.sampleRate);
+      const noiseData = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < noiseData.length; i++) {
+        noiseData[i] = (Math.random() * 2 - 1) * 0.35;
+      }
+      const noiseNode = targetCtx.createBufferSource();
+      noiseNode.buffer = noiseBuffer;
+
+      const noiseFilter = targetCtx.createBiquadFilter();
+      noiseFilter.type = "bandpass";
+      noiseFilter.frequency.setValueAtTime(params.rumble_cutoff || 120, now);
+      noiseFilter.Q.setValueAtTime(4.0, now);
+
+      const noiseGain = targetCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.35, now);
+
+      noiseNode.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(rumbleFilter);
+
+      subOsc.connect(rumbleFilter);
+      rumbleFilter.connect(rumbleGain);
+      rumbleGain.connect(layerBus);
+
+      subOsc.start(now);
+      noiseNode.start(now);
+      subOsc.stop(now + rDecay + 0.2);
+      noiseNode.stop(now + rDecay + 0.2);
+    }
+
+    // ==========================================
+    // CATENA DI EFFETTI & DISTORSIONE HARDCORE
+    // ==========================================
+    // 1. Overdrive / Saturatore
+    const driveShaper = targetCtx.createWaveShaper();
+    const driveType = params.drive_type || "tube";
+    const driveAmt = Math.max(0.1, (params.drive_amount || 4.0) * (1 + (superBotta - 1) * 0.3));
+    driveShaper.curve = this.getDistortionCurve(driveAmt, driveType);
+    driveShaper.oversample = "4x";
+
+    // 2. Wavefolder (Piegatura d'onda)
+    const wavefolder = targetCtx.createWaveShaper();
+    const foldAmt = Math.max(1.0, (params.fold_amount || 1.0) * (1 + (superBotta - 1) * 0.2));
+    wavefolder.curve = this.getWavefoldCurve(foldAmt);
+    wavefolder.oversample = "4x";
+
+    // 3. EQ a 3 Bande di Modellazione Timbrica
+    // Bassi Subwoofer
+    const eqLow = targetCtx.createBiquadFilter();
+    eqLow.type = "lowshelf";
+    eqLow.frequency.setValueAtTime(85, now);
+    const subBoost = (params.sub_boost || 4.0) + (params.eq_low || 4.0) + (superBotta - 1) * 2.5;
+    eqLow.gain.setValueAtTime(subBoost, now);
+
+    // Punch Medio
+    const eqMid = targetCtx.createBiquadFilter();
+    eqMid.type = "peaking";
+    eqMid.frequency.setValueAtTime(params.eq_midFreq || 550, now);
+    eqMid.Q.setValueAtTime(1.6, now);
+    const midGain = (params.eq_midGain || 0) + (superBotta - 1) * 1.5;
+    eqMid.gain.setValueAtTime(midGain, now);
+
+    // Taglio Acuto
+    const eqHigh = targetCtx.createBiquadFilter();
+    eqHigh.type = "highshelf";
+    eqHigh.frequency.setValueAtTime(4500, now);
+    eqHigh.gain.setValueAtTime(params.eq_high || 3.0, now);
+
+    // 4. Compressore di Punch / Slam Maximizer
+    const punchComp = targetCtx.createDynamicsCompressor();
+    punchComp.threshold.setValueAtTime(-14 - (superBotta - 1) * 6, now);
+    punchComp.knee.setValueAtTime(6, now);
+    punchComp.ratio.setValueAtTime(8 + (superBotta - 1) * 4, now);
+    punchComp.attack.setValueAtTime(0.003, now); // Attacco ultra-veloce per schiacciare e massimizzare
+    punchComp.release.setValueAtTime(0.06, now);
+
+    // 5. Soft Clipper & Limiter Master
+    const masterClipper = targetCtx.createWaveShaper();
+    masterClipper.curve = this.getDistortionCurve(1.8 * superBotta, "tube");
+
+    const outGain = targetCtx.createGain();
+    const mGain = (params.master_gain || 1.15) * 0.9 * (1 + (superBotta - 1) * 0.25);
+    outGain.gain.setValueAtTime(mGain, now);
+
+    // Connessione catena finale
+    layerBus.connect(driveShaper);
+    driveShaper.connect(wavefolder);
+    wavefolder.connect(eqLow);
+    eqLow.connect(eqMid);
+    eqMid.connect(eqHigh);
+    eqHigh.connect(punchComp);
+    punchComp.connect(masterClipper);
+    masterClipper.connect(outGain);
+    outGain.connect(destination);
+
+    return {
+      duration: totalKickDuration
+    };
+  }
+
+  /**
+   * Suona colpo singolo in tempo reale
+   */
+  triggerKick(params, velocity = 1.0) {
+    if (!this.isInitialized) {
+      this.init();
+    }
+    this.resumeIfNeeded();
+
+    const now = this.ctx.currentTime;
+    return this.buildKickVoice(this.ctx, this.masterGainNode, params, now, velocity);
+  }
+
+  /**
+   * Suona hi-hat in levare
+   */
+  triggerHiHat(velocity = 0.7, startTime = null) {
+    if (!this.isInitialized) this.init();
+    const now = startTime !== null ? startTime : this.ctx.currentTime;
+
+    const noiseBuffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.15, this.ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < noiseBuffer.length; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = "highpass";
+    filter.frequency.setValueAtTime(7500, now);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(velocity * 0.45, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGainNode);
+
+    noise.start(now);
+    noise.stop(now + 0.09);
+  }
+
+  /**
+   * Esportazione offline ad altissima fedeltà in formato WAV
+   */
+  async renderKickToWav(params, options = { isLoop: false, bpm: 140, bitDepth: 24, sampleRate: 44100 }) {
+    const sampleRate = options.sampleRate || 44100;
+    const isLoop = options.isLoop || false;
+    const bpm = options.bpm || 140;
+
+    let renderDuration = 0.9;
+    if (isLoop) {
+      renderDuration = 4 * (60 / bpm);
+    }
+
+    const offlineCtx = new OfflineAudioContext(2, Math.ceil(sampleRate * renderDuration), sampleRate);
+    const dest = offlineCtx.destination;
+
+    if (isLoop) {
+      const beatDuration = 60 / bpm;
+      for (let step = 0; step < 4; step++) {
+        const time = step * beatDuration;
+        this.buildKickVoice(offlineCtx, dest, params, time, 1.0);
+      }
+    } else {
+      this.buildKickVoice(offlineCtx, dest, params, 0, 1.0);
+    }
+
+    const renderedBuffer = await offlineCtx.startRendering();
+    return this.audioBufferToWav(renderedBuffer, options.bitDepth || 24);
+  }
+
+  /**
+   * Codifica AudioBuffer in WAV Blob con header RIFF
+   */
+  audioBufferToWav(buffer, bitDepth = 24) {
+    const numOfChan = buffer.numberOfChannels;
+    const length = buffer.length * numOfChan * (bitDepth / 8);
+    const bufferLength = 44 + length;
+    const arrayBuffer = new ArrayBuffer(bufferLength);
+    const view = new DataView(arrayBuffer);
+    const sampleRate = buffer.sampleRate;
+
+    const writeString = (offset, string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+
+    writeString(0, "RIFF");
+    view.setUint32(4, 36 + length, true);
+    writeString(8, "WAVE");
+    writeString(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numOfChan, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numOfChan * (bitDepth / 8), true);
+    view.setUint16(32, numOfChan * (bitDepth / 8), true);
+    view.setUint16(34, bitDepth, true);
+    writeString(36, "data");
+    view.setUint32(40, length, true);
+
+    let offset = 44;
+    const channels = [];
+    for (let i = 0; i < numOfChan; i++) {
+      channels.push(buffer.getChannelData(i));
+    }
+
+    for (let i = 0; i < buffer.length; i++) {
+      for (let ch = 0; ch < numOfChan; ch++) {
+        let sample = channels[ch][i];
+        sample = Math.max(-1, Math.min(1, sample));
+
+        if (bitDepth === 16) {
+          const s = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+          view.setInt16(offset, s, true);
+          offset += 2;
+        } else if (bitDepth === 24) {
+          const s = sample < 0 ? sample * 0x800000 : sample * 0x7fffff;
+          const intSample = Math.floor(s);
+          view.setUint8(offset, intSample & 0xff);
+          view.setUint8(offset + 1, (intSample >> 8) & 0xff);
+          view.setUint8(offset + 2, (intSample >> 16) & 0xff);
+          offset += 3;
+        } else if (bitDepth === 32) {
+          view.setFloat32(offset, sample, true);
+          offset += 4;
+        }
+      }
+    }
+
+    return new Blob([arrayBuffer], { type: "audio/wav" });
+  }
+}
