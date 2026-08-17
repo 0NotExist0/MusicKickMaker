@@ -3,12 +3,16 @@
  * Con motore Super Botta (Punch Maximizer), 303 Acid Attack e Distorsione Hardcore Multi-Stadio
  */
 
+import { BassSynthEngine } from "./bass-engine.js";
+
 export class KickSynthEngine {
   constructor() {
     this.ctx = null;
     this.masterGainNode = null;
     this.analyserNode = null;
     this.isInitialized = false;
+
+    this.bassEngine = new BassSynthEngine(this);
 
     // Distortion Curve Caches
     this.distortionCurves = new Map();
@@ -58,7 +62,6 @@ export class KickSynthEngine {
       const x = (i * 2) / n_samples - 1;
 
       if (type === "tube") {
-        // Saturazione calda asimmetrica
         const x_biased = x + 0.12 * x * x;
         if (x_biased > 0) {
           curve[i] = (1 - Math.exp(-k * x_biased)) / (1 - Math.exp(-k));
@@ -66,11 +69,9 @@ export class KickSynthEngine {
           curve[i] = -((1 - Math.exp(k * x_biased)) / (1 - Math.exp(-k)));
         }
       } else if (type === "diode") {
-        // Mordente diodo per transienti acidi
         const diode = Math.tanh(k * x) + 0.3 * Math.sin(Math.PI * x * (k * 0.4));
         curve[i] = Math.max(-0.96, Math.min(0.96, diode / (1 + k * 0.18)));
       } else {
-        // Hard clip violento
         const hard = ((3 + k) * x * 22 * deg) / (Math.PI + k * Math.abs(x));
         curve[i] = Math.max(-0.99, Math.min(0.99, hard * 0.65));
       }
@@ -111,10 +112,7 @@ export class KickSynthEngine {
     const t0 = startTime;
     const now = t0;
 
-    // Bus sommattore dei layer
     const layerBus = targetCtx.createGain();
-    
-    // Moltiplicatore "SUPER BOTTA" (Punch Maximizer)
     const superBotta = Math.max(1.0, params.super_botta || 1.0);
     const extremeMode = params.extreme_mode ? 1.4 : 1.0;
     layerBus.gain.value = velocity * extremeMode;
@@ -143,7 +141,6 @@ export class KickSynthEngine {
       osc303.frequency.setValueAtTime(base303Pitch * 2.8, now);
       osc303.frequency.exponentialRampToValueAtTime(base303Pitch * 0.6, now + attDecay * 0.8);
 
-      // Filtro risonante stile Roland TB-303
       const filter303 = targetCtx.createBiquadFilter();
       filter303.type = "lowpass";
       const baseCutoff = Math.max(100, params.attack303_cutoff || 2800);
@@ -155,7 +152,6 @@ export class KickSynthEngine {
       filter303.frequency.setValueAtTime(peakCutoff, now);
       filter303.frequency.exponentialRampToValueAtTime(Math.max(60, baseCutoff * 0.12), now + attDecay);
 
-      // Pre-Drive saturatore acido
       const drive303 = targetCtx.createWaveShaper();
       const driveAmt = Math.max(1, (params.attack303_drive || 4.0) * (1 + (superBotta - 1) * 0.25));
       drive303.curve = this.getDistortionCurve(driveAmt, "diode");
@@ -169,7 +165,6 @@ export class KickSynthEngine {
       osc303.start(now);
       osc303.stop(now + attDecay + 0.05);
 
-      // Schiocco iniziale (Click / Snap)
       if ((params.click_volume || 0.7) > 0.01) {
         const clickOsc = targetCtx.createOscillator();
         const clickGain = targetCtx.createGain();
@@ -206,7 +201,6 @@ export class KickSynthEngine {
       const bodyWave = params.body_waveform || "sine";
       bodyOsc.type = bodyWave;
 
-      // Inviluppo di Pitch a 3 stadi
       const startFreq = (params.body_startFreq || 480) * (1 + (superBotta - 1) * 0.2);
       const punchFreq = params.body_punchFreq || 150;
       const tailFreq = params.body_tailFreq || 50;
@@ -215,7 +209,6 @@ export class KickSynthEngine {
       bodyOsc.frequency.exponentialRampToValueAtTime(Math.max(20, punchFreq), now + punchDecay);
       bodyOsc.frequency.exponentialRampToValueAtTime(Math.max(20, tailFreq), now + punchDecay + tailDecay);
 
-      // Modulazione FM Metallica
       if ((params.fm_amount || 0) > 5) {
         const fmOsc = targetCtx.createOscillator();
         const fmGain = targetCtx.createGain();
@@ -299,28 +292,23 @@ export class KickSynthEngine {
     // ==========================================
     // CATENA DI EFFETTI & DISTORSIONE HARDCORE
     // ==========================================
-    // 1. Overdrive / Saturatore
     const driveShaper = targetCtx.createWaveShaper();
     const driveType = params.drive_type || "tube";
     const driveAmt = Math.max(0.1, (params.drive_amount || 4.0) * (1 + (superBotta - 1) * 0.3));
     driveShaper.curve = this.getDistortionCurve(driveAmt, driveType);
     driveShaper.oversample = "4x";
 
-    // 2. Wavefolder (Piegatura d'onda)
     const wavefolder = targetCtx.createWaveShaper();
     const foldAmt = Math.max(1.0, (params.fold_amount || 1.0) * (1 + (superBotta - 1) * 0.2));
     wavefolder.curve = this.getWavefoldCurve(foldAmt);
     wavefolder.oversample = "4x";
 
-    // 3. EQ a 3 Bande di Modellazione Timbrica
-    // Bassi Subwoofer
     const eqLow = targetCtx.createBiquadFilter();
     eqLow.type = "lowshelf";
     eqLow.frequency.setValueAtTime(85, now);
     const subBoost = (params.sub_boost || 4.0) + (params.eq_low || 4.0) + (superBotta - 1) * 2.5;
     eqLow.gain.setValueAtTime(subBoost, now);
 
-    // Punch Medio
     const eqMid = targetCtx.createBiquadFilter();
     eqMid.type = "peaking";
     eqMid.frequency.setValueAtTime(params.eq_midFreq || 550, now);
@@ -328,21 +316,18 @@ export class KickSynthEngine {
     const midGain = (params.eq_midGain || 0) + (superBotta - 1) * 1.5;
     eqMid.gain.setValueAtTime(midGain, now);
 
-    // Taglio Acuto
     const eqHigh = targetCtx.createBiquadFilter();
     eqHigh.type = "highshelf";
     eqHigh.frequency.setValueAtTime(4500, now);
     eqHigh.gain.setValueAtTime(params.eq_high || 3.0, now);
 
-    // 4. Compressore di Punch / Slam Maximizer
     const punchComp = targetCtx.createDynamicsCompressor();
     punchComp.threshold.setValueAtTime(-14 - (superBotta - 1) * 6, now);
     punchComp.knee.setValueAtTime(6, now);
     punchComp.ratio.setValueAtTime(8 + (superBotta - 1) * 4, now);
-    punchComp.attack.setValueAtTime(0.003, now); // Attacco ultra-veloce per schiacciare e massimizzare
+    punchComp.attack.setValueAtTime(0.003, now);
     punchComp.release.setValueAtTime(0.06, now);
 
-    // 5. Soft Clipper & Limiter Master
     const masterClipper = targetCtx.createWaveShaper();
     masterClipper.curve = this.getDistortionCurve(1.8 * superBotta, "tube");
 
@@ -350,7 +335,6 @@ export class KickSynthEngine {
     const mGain = (params.master_gain || 1.15) * 0.9 * (1 + (superBotta - 1) * 0.25);
     outGain.gain.setValueAtTime(mGain, now);
 
-    // Connessione catena finale
     layerBus.connect(driveShaper);
     driveShaper.connect(wavefolder);
     wavefolder.connect(eqLow);
@@ -367,16 +351,23 @@ export class KickSynthEngine {
   }
 
   /**
-   * Suona colpo singolo in tempo reale
+   * Suona colpo singolo kick
    */
   triggerKick(params, velocity = 1.0) {
-    if (!this.isInitialized) {
-      this.init();
-    }
+    if (!this.isInitialized) this.init();
     this.resumeIfNeeded();
-
     const now = this.ctx.currentTime;
     return this.buildKickVoice(this.ctx, this.masterGainNode, params, now, velocity);
+  }
+
+  /**
+   * Suona singola nota di basso
+   */
+  triggerBassNote(params, stepData, startTime = null, duration = 0.2) {
+    if (!this.isInitialized) this.init();
+    this.resumeIfNeeded();
+    const now = startTime !== null ? startTime : this.ctx.currentTime;
+    this.bassEngine.buildBassVoice(this.ctx, this.masterGainNode, params, stepData, now, duration);
   }
 
   /**
@@ -412,38 +403,57 @@ export class KickSynthEngine {
   }
 
   /**
-   * Esportazione offline ad altissima fedeltà in formato WAV
+   * Esportazione offline ad altissima fedeltà in formato WAV (Kick, Bass, o Entrambi)
    */
-  async renderKickToWav(params, options = { isLoop: false, bpm: 140, bitDepth: 24, sampleRate: 44100 }) {
+  async renderProjectToWav(kickParams, bassParams, sequencer, options = { exportMode: "both", isLoop: true, bpm: 140, bitDepth: 24, sampleRate: 44100 }) {
     const sampleRate = options.sampleRate || 44100;
     const isLoop = options.isLoop || false;
     const bpm = options.bpm || 140;
+    const mode = options.exportMode || "both"; // "kick_only", "bass_only", "both"
 
     let renderDuration = 0.9;
     if (isLoop) {
-      renderDuration = 4 * (60 / bpm);
+      renderDuration = 4 * (60 / bpm); // 1 bar 4/4
     }
 
     const offlineCtx = new OfflineAudioContext(2, Math.ceil(sampleRate * renderDuration), sampleRate);
     const dest = offlineCtx.destination;
+    const stepDuration = (60 / bpm) * 0.25;
 
     if (isLoop) {
-      const beatDuration = 60 / bpm;
-      for (let step = 0; step < 4; step++) {
-        const time = step * beatDuration;
-        this.buildKickVoice(offlineCtx, dest, params, time, 1.0);
+      for (let step = 0; step < 16; step++) {
+        const time = step * stepDuration;
+
+        // Render Kick
+        if (mode !== "bass_only" && sequencer.kickSteps[step]) {
+          const vel = sequencer.kickVelocities[step] || 1.0;
+          this.buildKickVoice(offlineCtx, dest, kickParams, time, vel);
+        }
+
+        // Render Bass
+        if (mode !== "kick_only" && sequencer.bassPattern && sequencer.bassPattern[step]?.active) {
+          this.bassEngine.buildBassVoice(offlineCtx, dest, bassParams, sequencer.bassPattern[step], time, stepDuration);
+        }
       }
     } else {
-      this.buildKickVoice(offlineCtx, dest, params, 0, 1.0);
+      if (mode !== "bass_only") {
+        this.buildKickVoice(offlineCtx, dest, kickParams, 0, 1.0);
+      }
+      if (mode === "bass_only") {
+        const firstActive = sequencer.bassPattern?.find(s => s.active) || { note: "C2", active: 1 };
+        this.bassEngine.buildBassVoice(offlineCtx, dest, bassParams, firstActive, 0, 0.4);
+      }
     }
 
     const renderedBuffer = await offlineCtx.startRendering();
     return this.audioBufferToWav(renderedBuffer, options.bitDepth || 24);
   }
 
-  /**
-   * Codifica AudioBuffer in WAV Blob con header RIFF
-   */
+  // Alias per retrocompatibilità
+  async renderKickToWav(params, options) {
+    return this.renderProjectToWav(params, {}, { kickSteps: [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], kickVelocities: [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] }, { ...options, exportMode: "kick_only" });
+  }
+
   audioBufferToWav(buffer, bitDepth = 24) {
     const numOfChan = buffer.numberOfChannels;
     const length = buffer.length * numOfChan * (bitDepth / 8);

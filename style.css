@@ -1,15 +1,15 @@
 /* ==========================================================================
-   KICKFORGE 303 - HARDCORE & TECHNO SYNTHESIZER DESIGN SYSTEM V2
-   Interfaccia Intuitiva per Utenti Non Esperti & Controlli Potenti
+   KICKFORGE 303 - HARDCORE & TECHNO SYNTHESIZER DESIGN SYSTEM V3
+   Studio Completo: Casse & Linee di Basso per Tutti i Sottogeneri
    ========================================================================== */
 
 :root {
   /* Palette Colori Studio */
-  --bg-core: #0a0b0e;
-  --bg-surface-1: #12141a;
-  --bg-surface-2: #191c24;
-  --bg-surface-3: #232733;
-  --bg-surface-active: #2e3444;
+  --bg-core: #090a0d;
+  --bg-surface-1: #111319;
+  --bg-surface-2: #181b24;
+  --bg-surface-3: #222633;
+  --bg-surface-active: #2d3345;
   
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-medium: rgba(255, 255, 255, 0.15);
@@ -24,6 +24,8 @@
   --accent-cyan-glow: rgba(6, 182, 212, 0.4);
   --accent-red: #ef4444;        /* Rosso Distorsione */
   --accent-red-glow: rgba(239, 68, 68, 0.4);
+  --accent-purple: #a855f7;     /* Viola Linea di Basso */
+  --accent-purple-glow: rgba(168, 85, 247, 0.4);
 
   /* Testo */
   --text-primary: #f9fafb;
@@ -38,7 +40,7 @@
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-full: 9999px;
-  --shadow-panel: 0 10px 30px rgba(0, 0, 0, 0.6);
+  --shadow-panel: 0 10px 30px rgba(0, 0, 0, 0.65);
   --shadow-knob: inset 0 2px 4px rgba(255, 255, 255, 0.15), 0 5px 12px rgba(0, 0, 0, 0.65);
 }
 
@@ -63,10 +65,10 @@ body {
 .app-wrapper {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 16px 24px 32px 24px;
+  padding: 16px 24px 36px 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 /* ==========================================================================
@@ -212,7 +214,7 @@ body {
 }
 
 /* ==========================================================================
-   PRESET BROWSER CON SCHEDE CATEGORIE
+   PRESET BROWSER CASSA
    ========================================================================== */
 
 .preset-browser-card {
@@ -225,20 +227,29 @@ body {
   gap: 12px;
 }
 
+.card-section-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent-amber);
+  white-space: nowrap;
+}
+
 .preset-browser-header {
   display: flex;
   align-items: center;
+  gap: 10px;
   overflow-x: auto;
 }
 
-.category-tabs {
+.category-tabs, .bass-cat-tabs {
   display: flex;
   gap: 6px;
   overflow-x: auto;
   scrollbar-width: none;
 }
 
-.category-tabs::-webkit-scrollbar {
+.category-tabs::-webkit-scrollbar, .bass-cat-tabs::-webkit-scrollbar {
   display: none;
 }
 
@@ -249,7 +260,7 @@ body {
   font-family: var(--font-main);
   font-size: 12px;
   font-weight: 700;
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: var(--radius-full);
   cursor: pointer;
   white-space: nowrap;
@@ -268,6 +279,12 @@ body {
   font-weight: 800;
 }
 
+.bass-cat-tabs .cat-tab-btn.active {
+  background: var(--accent-303);
+  border-color: var(--accent-303);
+  color: #000;
+}
+
 .preset-browser-body {
   display: flex;
   align-items: center;
@@ -275,7 +292,7 @@ body {
   flex-wrap: wrap;
 }
 
-.preset-dropdown-wrapper {
+.preset-dropdown-wrapper, .bass-select-wrap {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -782,11 +799,11 @@ body {
   color: #fff;
 }
 
-/* Griglia 16 Step */
+/* Griglia 16 Step Completa (Cassa, Basso, Hi-Hat) */
 .step-matrix-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .seq-track {
@@ -794,6 +811,11 @@ body {
   grid-template-columns: 80px 1fr;
   align-items: center;
   gap: 10px;
+}
+
+.seq-track-bass {
+  align-items: flex-start;
+  padding-top: 4px;
 }
 
 .track-label {
@@ -816,6 +838,12 @@ body {
   color: var(--accent-amber);
 }
 
+.bass-tag {
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid var(--accent-303);
+  color: var(--accent-303);
+}
+
 .hihat-tag {
   background: rgba(6, 182, 212, 0.2);
   border: 1px solid var(--accent-cyan);
@@ -823,6 +851,12 @@ body {
 }
 
 .steps-grid {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 4px;
+}
+
+.steps-grid-bass {
   display: grid;
   grid-template-columns: repeat(16, 1fr);
   gap: 4px;
@@ -864,8 +898,90 @@ body {
   box-shadow: 0 0 8px var(--accent-cyan-glow);
 }
 
-.seq-step.current-playing-step {
-  outline: 2px solid #ffffff;
+/* Colonna Step Basso */
+.bass-step-column {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  transition: all 0.1s ease;
+}
+
+.bass-step-column:nth-child(4n+1) {
+  border-left: 2px solid rgba(34, 197, 94, 0.4);
+}
+
+.bass-step-column.active {
+  border-color: var(--accent-303);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.seq-bass-step {
+  width: 100%;
+  height: 22px;
+  font-size: 9px;
+}
+
+.seq-bass-step.active {
+  background: var(--accent-303);
+  color: #000;
+  border-color: #4ade80;
+  box-shadow: 0 0 6px var(--accent-303-glow);
+}
+
+.bass-note-select {
+  width: 100%;
+  height: 20px;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 2px;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 0 1px;
+  outline: none;
+  cursor: pointer;
+}
+
+.bass-note-select option {
+  background: var(--bg-surface-2);
+  color: #fff;
+}
+
+.step-flag-btn {
+  width: 100%;
+  height: 16px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 800;
+  border: 1px solid var(--border-subtle);
+  border-radius: 2px;
+  background: var(--bg-surface-2);
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.acc-btn.active {
+  background: var(--accent-amber);
+  color: #000;
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 6px var(--accent-amber-glow);
+}
+
+.sld-btn.active {
+  background: var(--accent-cyan);
+  color: #000;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 6px var(--accent-cyan-glow);
+}
+
+.current-playing-step {
+  outline: 2px solid #ffffff !important;
   outline-offset: 1px;
 }
 
@@ -901,7 +1017,116 @@ body {
 }
 
 /* ==========================================================================
-   4 MODULI DI SINTESI (LAYOUT A SCHEDE)
+   SEZIONE SINTETIZZATORE BASSI (BASSLINE STUDIO)
+   ========================================================================== */
+
+.bass-synth-master-section {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(6, 182, 212, 0.05)), var(--bg-surface-1);
+  border: 2px solid rgba(34, 197, 94, 0.35);
+  border-radius: var(--radius-lg);
+  padding: 18px 22px;
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bass-master-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.bass-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bass-badge-glow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--accent-303);
+  letter-spacing: 0.08em;
+}
+
+.bass-main-title {
+  font-family: var(--font-brand);
+  font-size: 18px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+
+.bass-sub-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.bass-preset-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: var(--bg-surface-2);
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.bass-controls-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.bass-osc-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 768px) {
+  .bass-osc-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+.osc-box {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.osc-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-secondary);
+}
+
+.knobs-grid-bass {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px 8px;
+}
+
+@media (max-width: 900px) {
+  .knobs-grid-bass {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ==========================================================================
+   4 MODULI DI SINTESI CASSA
    ========================================================================== */
 
 .synth-modules-grid {
@@ -1107,6 +1332,7 @@ body {
 .radio-pill-group {
   display: flex;
   gap: 4px;
+  flex-wrap: wrap;
 }
 
 .radio-pill { cursor: pointer; }
@@ -1339,13 +1565,8 @@ body {
   line-height: 1.35;
 }
 
-.row-high .row-content strong {
-  color: #4ade80;
-}
-
-.row-low .row-content strong {
-  color: #38bdf8;
-}
+.row-high .row-content strong { color: #4ade80; }
+.row-low .row-content strong { color: #38bdf8; }
 
 .tooltip-footer-tip {
   margin-top: 4px;
@@ -1390,7 +1611,7 @@ body {
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 540px;
+  max-width: 560px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.85);
   overflow: hidden;
 }
