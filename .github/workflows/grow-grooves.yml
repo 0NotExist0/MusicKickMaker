@@ -1,0 +1,43 @@
+name: Grow Groove Library
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # ogni giorno alle 03:00 UTC
+  workflow_dispatch: {}    # esecuzione manuale dal tab Actions
+
+permissions:
+  contents: write
+
+concurrency:
+  group: grow-grooves
+  cancel-in-progress: false
+
+jobs:
+  grow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Genera groove con l'AI
+        env:
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          GROOVES_PER_RUN: "3"
+        run: node scripts/generate-grooves.js
+
+      - name: Commit della libreria aggiornata
+        run: |
+          git config user.name "groove-bot"
+          git config user.email "groove-bot@users.noreply.github.com"
+          git add groove-library.json
+          if git diff --staged --quiet; then
+            echo "Nessuna modifica alla libreria."
+          else
+            git commit -m "chore: crescita automatica libreria groove [skip ci]"
+            git push
+          fi

@@ -79,6 +79,27 @@ class KickForgeApp {
 
     this.loadKickPreset(this.currentKickPresetId);
     this.loadBassPreset(this.currentBassPresetId);
+
+    // Libreria di groove condivisa (cresce da sola via GitHub Actions)
+    this._grooveLibrary = [];
+    this.loadGrooveLibrary();
+  }
+
+  loadGrooveLibrary() {
+    fetch("groove-library.json", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && Array.isArray(d.grooves)) this._grooveLibrary = d.grooves; })
+      .catch(() => {});
+  }
+
+  grooveFromLibrary() {
+    const lib = this._grooveLibrary || [];
+    if (!lib.length) {
+      this.uiManager.showToast("Libreria vuota per ora (si riempie via GitHub Actions).", "info");
+      return;
+    }
+    const g = lib[Math.floor(Math.random() * lib.length)];
+    this.applyGroove(g);
   }
 
   debounceKickTrigger() {
@@ -492,11 +513,13 @@ class KickForgeApp {
     try {
       const seq = this.sequencer;
       const current = { bass: seq.bassPattern, hats: seq.hihatSteps };
-      const mem = this._loadGrooveMemory().slice().sort(() => Math.random() - 0.5).slice(0, 3)
-        .map(m => ({ bass: m.bass, hats: m.hats }));
+      const pool = [
+        ...this._loadGrooveMemory().map(m => ({ bass: m.bass, hats: m.hats })),
+        ...(this._grooveLibrary || []).map(m => ({ bass: m.bass, hats: m.hats }))
+      ].sort(() => Math.random() - 0.5).slice(0, 3);
       const res = await fetch("/api/generate-preset", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: "groove", subgenre: this.aiSubgenre || "techno", current, seeds: mem })
+        body: JSON.stringify({ target: "groove", subgenre: this.aiSubgenre || "techno", current, seeds: pool })
       });
       if (!(res.headers.get("content-type") || "").includes("application/json")) return null;
       const data = await res.json();
@@ -1352,6 +1375,7 @@ class KickForgeApp {
     if (autoSub) autoSub.addEventListener("change", (e) => { this.aiSubgenre = e.target.value || "techno"; });
     document.querySelectorAll(".js-ai-groove").forEach(b => b.addEventListener("click", () => this.aiGrooveNow()));
     document.querySelectorAll(".js-remember-groove").forEach(b => b.addEventListener("click", () => this.rememberCurrentGroove()));
+    document.querySelectorAll(".js-library-groove").forEach(b => b.addEventListener("click", () => this.grooveFromLibrary()));
 
     // Fill / Trick (variazioni rapide one-shot)
     document.querySelectorAll(".js-fill-kick").forEach(b => b.addEventListener("click", () => this.applyFill("kick")));

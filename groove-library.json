@@ -1,0 +1,367 @@
+{
+  "updated": "2026-08-25T22:58:17.549Z",
+  "note": "Libreria di groove (basso + hi-hat) su cassa 4/4. Cresce da sola via GitHub Actions.",
+  "grooves": [
+    {
+      "name": "🌀 Rolling Sub",
+      "subgenre": "techno",
+      "bass": [
+        {
+          "note": "F1",
+          "active": 1,
+          "accent": 1,
+          "slide": 0
+        },
+        {
+          "note": "F1",
+          "active": 1,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "F1",
+          "active": 0,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "F1",
+          "active": 1,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "F1",
+          "active": 1,
+          "accent": 1,
+          "slide": 0
+        },
+        {
+          "note": "F1",
+          "active": 1,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "F1",
+          "active": 0,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "F1",
+          "active": 1,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "F1",
+          "active": 1,
+          "accent": 1,
+          "slide": 0
+        },
+        {
+          "note": "F1",
+          "active": 1,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "F1",
+          "active": 0,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "A#1",
+          "active": 1,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "F1",
+          "active": 1,
+          "accent": 1,
+          "slide": 0
+        },
+        {
+          "note": "F1",
+          "active": 1,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "F1",
+          "active": 0,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "F1",
+          "active": 1,
+          "accent": 0,
+          "slide": 0
+        }
+      ],
+      "hats": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "name": "🧪 Acid Squelch",
+      "subgenre": "acidcore",
+      "bass": [
+        {
+          "note": "C2",
+          "active": 1,
+          "accent": 1,
+          "slide": 0
+        },
+        {
+          "note": "C2",
+          "active": 1,
+          "accent": 0,
+          "slide": 1
+        },
+        {
+          "note": "D#2",
+          "active": 1,
+          "accent": 1,
+          "slide": 0
+        },
+        {
+          "note": "C2",
+          "active": 0,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "G1",
+          "active": 1,
+          "accent": 0,
+          "slide": 1
+        },
+        {
+          "note": "A#1",
+          "active": 1,
+          "accent": 1,
+          "slide": 0
+        },
+        {
+          "note": "C2",
+          "active": 1,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "D2",
+          "active": 1,
+          "accent": 1,
+          "slide": 1
+        },
+        {
+          "note": "C2",
+          "active": 1,
+          "accent": 1,
+          "slide": 0
+        },
+        {
+          "note": "C2",
+          "active": 0,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "F2",
+          "active": 1,
+          "accent": 1,
+          "slide": 1
+        },
+        {
+          "note": "D#2",
+          "active": 1,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "C2",
+          "active": 1,
+          "accent": 0,
+          "slide": 1
+        },
+        {
+          "note": "A#1",
+          "active": 1,
+          "accent": 1,
+          "slide": 0
+        },
+        {
+          "note": "G1",
+          "active": 1,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "B1",
+          "active": 1,
+          "accent": 1,
+          "slide": 0
+        }
+      ],
+      "hats": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "name": "Hypnotic Pulse",
+      "subgenre": "techno",
+      "bass": [
+        {
+          "note": "C2",
+          "active": 1,
+          "accent": 1,
+          "slide": 0
+        },
+        {
+          "note": "C2",
+          "active": 0,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "C2",
+          "active": 1,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "C2",
+          "active": 0,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "D2",
+          "active": 1,
+          "accent": 1,
+          "slide": 1
+        },
+        {
+          "note": "D2",
+          "active": 0,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "D2",
+          "active": 1,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "D2",
+          "active": 0,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "C#2",
+          "active": 1,
+          "accent": 1,
+          "slide": 0
+        },
+        {
+          "note": "C#2",
+          "active": 0,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "C#2",
+          "active": 1,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "C#2",
+          "active": 0,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "C2",
+          "active": 1,
+          "accent": 1,
+          "slide": 0
+        },
+        {
+          "note": "C2",
+          "active": 0,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "C2",
+          "active": 1,
+          "accent": 0,
+          "slide": 0
+        },
+        {
+          "note": "C2",
+          "active": 0,
+          "accent": 0,
+          "slide": 0
+        }
+      ],
+      "hats": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "t": 1787698695748
+    }
+  ]
+}
