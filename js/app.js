@@ -394,6 +394,67 @@ class KickForgeApp {
     this.uiManager.showToast("🎲 Variazione basso creata", "info");
   }
 
+  // Varia l'ORDINE del groove: pattern di cassa, hi-hat e note/ottave del basso.
+  // Funziona anche in play: il sequencer legge i pattern ad ogni step.
+  variatePattern() {
+    const seq = this.sequencer;
+
+    // CASSA: primo colpo sempre, battere spesso attivo, controtempo vario
+    const nk = new Array(16).fill(0);
+    nk[0] = 1;
+    for (let i = 1; i < 16; i++) {
+      const onBeat = (i % 4 === 0);
+      nk[i] = Math.random() < (onBeat ? 0.85 : 0.3) ? 1 : 0;
+    }
+    if (nk.reduce((a, b) => a + b, 0) < 3) { nk[4] = 1; nk[8] = 1; nk[12] = 1; }
+    seq.kickSteps = nk;
+
+    // HI-HAT: levare vario (classico sul 3° sedicesimo di ogni movimento)
+    const nh = new Array(16).fill(0);
+    for (let i = 0; i < 16; i++) {
+      const off = (i % 4 === 2);
+      nh[i] = Math.random() < (off ? 0.7 : 0.18) ? 1 : 0;
+    }
+    seq.hihatSteps = nh;
+
+    // BASSO: nuovo ordine di note e ottave, restando sulle note già usate (tonalità)
+    const usedRoots = [...new Set(
+      seq.bassPattern.filter(s => s.active).map(s => s.note.replace(/-?\d+/, ""))
+    )];
+    const roots = usedRoots.length ? usedRoots : ["C", "D#", "F", "G", "A#"];
+    const octs = ["1", "2", "2"]; // mix ottava 1 (profonda) e 2
+    for (let i = 0; i < 16; i++) {
+      const s = seq.bassPattern[i];
+      s.active = Math.random() < 0.55 ? 1 : 0;
+      if (s.active) {
+        const root = roots[Math.floor(Math.random() * roots.length)];
+        const cand = root + octs[Math.floor(Math.random() * octs.length)];
+        s.note = AVAILABLE_NOTES.includes(cand)
+          ? cand
+          : (AVAILABLE_NOTES.includes(root + "2") ? root + "2" : "C2");
+        s.accent = Math.random() < 0.4 ? 1 : 0;
+        s.slide = Math.random() < 0.3 ? 1 : 0;
+      } else {
+        s.accent = 0;
+        s.slide = 0;
+      }
+    }
+    if (!seq.bassPattern.some(s => s.active)) seq.bassPattern[0].active = 1;
+
+    // Aggiorna la UI (griglie cassa, hi-hat, basso)
+    this.refreshKickSequencerStepsUI();
+    this.refreshHiHatStepsUI();
+    this.renderBassSequencerGrid();
+    document.querySelectorAll(".pattern-btn").forEach(b => b.classList.remove("active"));
+    this.uiManager.showToast("🎲 Nuovo groove: cassa, basso (note/ottave) e hi-hat", "info");
+  }
+
+  refreshHiHatStepsUI() {
+    document.querySelectorAll(".seq-step[data-track='hihat']").forEach((btn, idx) => {
+      btn.classList.toggle("active", !!this.sequencer.hihatSteps[idx]);
+    });
+  }
+
   // ==========================================
   // GESTIONE PRESET BASSO
   // ==========================================
@@ -1044,6 +1105,7 @@ class KickForgeApp {
     // 11. Crea Variazione (tasti in alto + tasti "varia live" nel transport)
     document.querySelectorAll(".js-variate-kick").forEach(b => b.addEventListener("click", () => this.variateKick()));
     document.querySelectorAll(".js-variate-bass").forEach(b => b.addEventListener("click", () => this.variateBass()));
+    document.querySelectorAll(".js-variate-pattern").forEach(b => b.addEventListener("click", () => this.variatePattern()));
 
     // Hotkeys
     window.addEventListener("keydown", (e) => {
