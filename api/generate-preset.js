@@ -192,6 +192,50 @@ ${guide}
 - Output must be strictly parseable JSON, no comments, no markdown fences.`;
 }
 
+// ---- Groove (basso + hi-hat; la cassa è sempre 4/4 e non si genera) -------
+const AVAILABLE_NOTES = [
+  "C1", "C#1", "D1", "D#1", "E1", "F1", "F#1", "G1", "G#1", "A1", "A#1", "B1",
+  "C2", "C#2", "D2", "D#2", "E2", "F2", "F#2", "G2", "G#2", "A2", "A#2", "B2", "C3"
+];
+
+function sanitizeGroove(parsed) {
+  const toBool = v => (v === 1 || v === true || v === "1") ? 1 : 0;
+  const bassIn = Array.isArray(parsed.bass) ? parsed.bass : [];
+  const hatsIn = Array.isArray(parsed.hats) ? parsed.hats : [];
+  const bass = [];
+  for (let i = 0; i < 16; i++) {
+    const s = bassIn[i] || {};
+    bass.push({
+      note: AVAILABLE_NOTES.includes(s.note) ? s.note : "C2",
+      active: toBool(s.active), accent: toBool(s.accent), slide: toBool(s.slide)
+    });
+  }
+  const hats = [];
+  for (let i = 0; i < 16; i++) hats.push(toBool(hatsIn[i]));
+  return { bass, hats };
+}
+
+function buildGroovePrompt() {
+  return `You design grooves for KickForge 303, a synth for the TECHNO family (techno, hard techno, acidcore, gabber, frenchcore, uptempo, industrial).
+The KICK is ALWAYS four-on-the-floor and fixed — do NOT design it.
+Design a 16-step BASS line and a 16-step HI-HAT pattern that groove over that steady kick.
+
+Return ONLY valid JSON:
+{
+  "name": string (short, may include one emoji),
+  "subgenre": string,
+  "bass": [ 16 objects: {"note": one of C1..C3, "active": 0 or 1, "accent": 0 or 1, "slide": 0 or 1} ],
+  "hats": [ 16 numbers, each 0 or 1 ]
+}
+
+Rules:
+- EXACTLY 16 entries in "bass" and 16 in "hats". Allowed notes: ${JSON.stringify(AVAILABLE_NOTES)}.
+- Keep it hypnotic and rhythmic; use rests (active:0) for groove; use slides/accents like a TB-303.
+- Hi-hats usually land on the off-beats (steps 2,6,10,14) with some 16th variation.
+- If a CURRENT groove or SEED grooves are given, EVOLVE from them: keep the vibe, change details.
+- Strictly parseable JSON, no comments, no markdown.`;
+}
+
 async function readBody(req) {
   if (req.body) {
     if (typeof req.body === "string") {
@@ -229,27 +273,43 @@ module.exports = async (req, res) => {
 
   const body = await readBody(req);
   const prompt = (body && typeof body.prompt === "string") ? body.prompt.slice(0, 600).trim() : "";
-  const target = body && body.target === "bass" ? "bass" : "kick";
-  const schema = target === "bass" ? BASS_SCHEMA : KICK_SCHEMA;
-  const currentParams = body && body.current ? pickKnown(body.current.params || body.current, schema) : null;
-  const isTweak = !!currentParams && Object.keys(currentParams).length > 0;
+  const target = (body && ["bass", "groove"].includes(body.target)) ? body.target : "kick";
 
-  if (!prompt) {
-    res.statusCode = 400;
-    return res.end(JSON.stringify({ error: "Prompt mancante." }));
+  // Costruzione del messaggio in base al target
+  let systemContent, userContent;
+  let schema = null;
+
+  if (target === "groove") {
+    systemContent = buildGroovePrompt();
+    const subgenre = (body && typeof body.subgenre === "string") ? body.subgenre.slice(0, 60) : "techno";
+    const seeds = (body && Array.isArray(body.seeds)) ? body.seeds.slice(0, 3) : [];
+    const current = (body && body.current) ? body.current : null;
+    let u = `Subgenre: ${subgenre}.`;
+    if (prompt) u += ` Extra: ${prompt}.`;
+    if (current) u += `\nCURRENT groove (evolve from this):\n${JSON.stringify(current).slice(0, 1500)}`;
+    if (seeds.length) u += `\nSEED grooves the user liked (keep this vibe):\n${JSON.stringify(seeds).slice(0, 1500)}`;
+    userContent = u;
+  } else {
+    schema = target === "bass" ? BASS_SCHEMA : KICK_SCHEMA;
+    const currentParams = body && body.current ? pickKnown(body.current.params || body.current, schema) : null;
+    const isTweak = !!currentParams && Object.keys(currentParams).length > 0;
+    if (!prompt) {
+      res.statusCode = 400;
+      return res.end(JSON.stringify({ error: "Prompt mancante." }));
+    }
+    systemContent = buildSystemPrompt(target, isTweak);
+    userContent = isTweak
+      ? `CURRENT parameters (JSON):\n${JSON.stringify(currentParams)}\n\nInstruction: ${prompt}`
+      : prompt;
   }
-
-  const userContent = isTweak
-    ? `CURRENT parameters (JSON):\n${JSON.stringify(currentParams)}\n\nInstruction: ${prompt}`
-    : prompt;
 
   const payload = {
     model,
-    temperature: 0.75,
+    temperature: 0.8,
     max_tokens: 6000,
     response_format: { type: "json_object" },
     messages: [
-      { role: "system", content: buildSystemPrompt(target, isTweak) },
+      { role: "system", content: systemContent },
       { role: "user", content: userContent }
     ]
   };
@@ -284,19 +344,27 @@ module.exports = async (req, res) => {
         parsed = m ? JSON.parse(m[0]) : {};
       }
 
-      const params = sanitizeParams(parsed.params || parsed, schema);
-      if (Object.keys(params).length === 0) {
-        lastErr = "Il modello non ha prodotto parametri validi.";
-        continue;
-      }
-
       const name = (typeof parsed.name === "string" && parsed.name.trim())
         ? parsed.name.trim().slice(0, 60)
-        : (target === "bass" ? "🤖 Basso AI" : "🤖 Cassa AI");
+        : (target === "groove" ? "🤖 Groove AI" : target === "bass" ? "🤖 Basso AI" : "🤖 Cassa AI");
 
-      const result = { name, params, model, target };
-      if (target !== "bass") {
-        result.bpm = clampNum(parsed.bpm, 60, 260) ?? 175;
+      let result;
+      if (target === "groove") {
+        const g = sanitizeGroove(parsed);
+        if (!g.bass.some(s => s.active)) { lastErr = "Groove senza note di basso."; continue; }
+        result = {
+          name, target, model,
+          subgenre: (typeof parsed.subgenre === "string" ? parsed.subgenre.slice(0, 40) : "techno"),
+          bass: g.bass, hats: g.hats
+        };
+      } else {
+        const params = sanitizeParams(parsed.params || parsed, schema);
+        if (Object.keys(params).length === 0) {
+          lastErr = "Il modello non ha prodotto parametri validi.";
+          continue;
+        }
+        result = { name, params, model, target };
+        if (target !== "bass") result.bpm = clampNum(parsed.bpm, 60, 260) ?? 175;
       }
 
       res.statusCode = 200;

@@ -446,6 +446,94 @@ class KickForgeApp {
     if (!silent) this.uiManager.showToast("🎸 Ritmo basso variato (note/ottave)", "info");
   }
 
+  // ---- GROOVE AI + memoria che si evolve --------------------------------------
+  _loadGrooveMemory() {
+    try { return JSON.parse(localStorage.getItem("kickforge_groove_memory_v1")) || []; }
+    catch { return []; }
+  }
+  _saveGrooveMemory(mem) {
+    try { localStorage.setItem("kickforge_groove_memory_v1", JSON.stringify(mem.slice(-12))); } catch (e) {}
+  }
+  _rememberGroove(g, pinned = false) {
+    if (!g || !Array.isArray(g.bass)) return;
+    const mem = this._loadGrooveMemory();
+    mem.push({ bass: g.bass, hats: g.hats, subgenre: g.subgenre || "techno", pinned, t: Date.now() });
+    this._saveGrooveMemory(mem);
+  }
+  rememberCurrentGroove() {
+    const seq = this.sequencer;
+    this._rememberGroove({
+      bass: JSON.parse(JSON.stringify(seq.bassPattern)),
+      hats: seq.hihatSteps.slice(),
+      subgenre: this.aiSubgenre || "techno"
+    }, true);
+    this.uiManager.showToast("💾 Groove ricordato: l'AI evolverà da questo", "success");
+  }
+
+  // Applica un groove (basso + hi-hat). La cassa resta SEMPRE 4/4.
+  applyGroove(g, silent = false) {
+    if (!g || !Array.isArray(g.bass)) return;
+    const seq = this.sequencer;
+    seq.kickSteps = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0];
+    seq.kickVelocities = [1.0, 0.7, 0.7, 0.7, 0.95, 0.7, 0.7, 0.7, 0.95, 0.7, 0.7, 0.7, 0.95, 0.7, 0.7, 0.7];
+    seq.bassPattern = g.bass.slice(0, 16).map(s => ({
+      note: s.note || "C2", active: s.active ? 1 : 0, accent: s.accent ? 1 : 0, slide: s.slide ? 1 : 0
+    }));
+    while (seq.bassPattern.length < 16) seq.bassPattern.push({ note: "C2", active: 0, accent: 0, slide: 0 });
+    if (Array.isArray(g.hats)) { seq.hihatSteps = g.hats.slice(0, 16).map(v => v ? 1 : 0); seq.hihatEnabled = true; }
+    this.refreshKickSequencerStepsUI();
+    this.refreshHiHatStepsUI();
+    this.renderBassSequencerGrid();
+    if (!silent) this.uiManager.showToast(`🤖 Groove AI: ${g.name || g.subgenre || "techno"}`, "success");
+  }
+
+  // Chiede all'AI un nuovo groove che evolve da quello attuale + dalla memoria.
+  async aiSuggestGroove() {
+    try {
+      const seq = this.sequencer;
+      const current = { bass: seq.bassPattern, hats: seq.hihatSteps };
+      const mem = this._loadGrooveMemory().slice().sort(() => Math.random() - 0.5).slice(0, 3)
+        .map(m => ({ bass: m.bass, hats: m.hats }));
+      const res = await fetch("/api/generate-preset", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: "groove", subgenre: this.aiSubgenre || "techno", current, seeds: mem })
+      });
+      if (!(res.headers.get("content-type") || "").includes("application/json")) return null;
+      const data = await res.json();
+      if (!res.ok || !Array.isArray(data.bass)) return null;
+      return data;
+    } catch (e) { return null; }
+  }
+
+  async aiGrooveNow() {
+    this.uiManager.showToast("🤖 L'AI sta creando un groove techno…", "info");
+    const g = await this.aiSuggestGroove();
+    if (g) { this.applyGroove(g); this._rememberGroove(g); }
+    else this.uiManager.showToast("Groove AI non disponibile qui (serve deploy Vercel + key).", "error");
+  }
+
+  _prefetchGroove() {
+    if (this._grooveFetching) return;
+    this._grooveFetching = true;
+    this.aiSuggestGroove()
+      .then(g => { this._readyGroove = g; this._grooveFetching = false; })
+      .catch(() => { this._grooveFetching = false; });
+  }
+
+  setAutoAI(on) {
+    this._autoAI = !!on;
+    this._readyGroove = null;
+    const btn = document.getElementById("auto-ai-btn");
+    if (btn) {
+      btn.classList.toggle("active", this._autoAI);
+      btn.textContent = this._autoAI ? "🤖 AI: ON" : "🤖 AI: OFF";
+    }
+    if (this._autoAI) {
+      this._prefetchGroove();
+      this.uiManager.showToast("🤖 AUTO guidato dall'AI: i groove evolvono da soli", "success");
+    }
+  }
+
   // ---- Modalità AUTO: cambia il groove da solo ogni N battute (sempre 4/4) ---
   setAuto(on) {
     this._autoOn = !!on;
@@ -458,6 +546,7 @@ class KickForgeApp {
     }
     if (this._autoOn) {
       this.uiManager.showToast("🔄 AUTO attivo: il groove cambia da solo (cassa sempre 4/4)", "success");
+      if (this._autoAI) this._prefetchGroove();
       if (!this.sequencer.isPlaying) {
         const playBtn = document.getElementById("seq-play-btn");
         if (playBtn) playBtn.click(); // avvia il loop
@@ -475,15 +564,29 @@ class KickForgeApp {
       this._autoBarCount = (this._autoBarCount || 0) + 1;
       const interval = this._autoInterval || 4;
       if (this._autoBarCount % interval === 0) {
-        this.variateBassPattern(true);
-        this.variateHatsPattern(true);
-        if (Math.random() < 0.4) this.variateKickPattern(true); // ogni tanto ghost kick
-        // ogni due cicli, un fill al volo per movimento
-        if (this._autoBarCount % (interval * 2) === 0) {
-          const fills = ["kick", "hats", "bass", "break"];
-          this.applyFill(fills[Math.floor(Math.random() * fills.length)]);
+        if (this._autoAI) {
+          // AI: applica il groove pre-caricato (allineato alla battuta) e ne pre-carica un altro
+          if (this._readyGroove) {
+            this.applyGroove(this._readyGroove, true);
+            this._rememberGroove(this._readyGroove);
+            this._readyGroove = null;
+            this.uiManager.showToast("🔄🤖 Groove evoluto dall'AI", "info");
+          } else {
+            // non ancora pronto: variazione casuale per non restare fermi
+            this.variateBassPattern(true);
+            this.variateHatsPattern(true);
+          }
+          this._prefetchGroove();
+        } else {
+          this.variateBassPattern(true);
+          this.variateHatsPattern(true);
+          if (Math.random() < 0.4) this.variateKickPattern(true); // ogni tanto ghost kick
+          if (this._autoBarCount % (interval * 2) === 0) {
+            const fills = ["kick", "hats", "bass", "break"];
+            this.applyFill(fills[Math.floor(Math.random() * fills.length)]);
+          }
+          this.uiManager.showToast("🔄 Groove cambiato (auto)", "info");
         }
-        this.uiManager.showToast("🔄 Groove cambiato (auto)", "info");
       }
     }
     this._lastAutoStep = activeStep;
@@ -1234,13 +1337,21 @@ class KickForgeApp {
     document.querySelectorAll(".js-ritmo-bass").forEach(b => b.addEventListener("click", () => this.variateBassPattern()));
     document.querySelectorAll(".js-ritmo-hats").forEach(b => b.addEventListener("click", () => this.variateHatsPattern()));
 
-    // Modalità AUTO (cambio groove automatico)
+    // Modalità AUTO (cambio groove automatico) + AI
     this._autoOn = false;
+    this._autoAI = false;
     this._autoInterval = 4;
+    this.aiSubgenre = "techno";
     const autoBtn = document.getElementById("auto-toggle-btn");
     if (autoBtn) autoBtn.addEventListener("click", () => this.setAuto(!this._autoOn));
     const autoInterval = document.getElementById("auto-interval");
     if (autoInterval) autoInterval.addEventListener("change", (e) => { this._autoInterval = parseInt(e.target.value, 10) || 4; });
+    const autoAiBtn = document.getElementById("auto-ai-btn");
+    if (autoAiBtn) autoAiBtn.addEventListener("click", () => this.setAutoAI(!this._autoAI));
+    const autoSub = document.getElementById("auto-subgenre");
+    if (autoSub) autoSub.addEventListener("change", (e) => { this.aiSubgenre = e.target.value || "techno"; });
+    document.querySelectorAll(".js-ai-groove").forEach(b => b.addEventListener("click", () => this.aiGrooveNow()));
+    document.querySelectorAll(".js-remember-groove").forEach(b => b.addEventListener("click", () => this.rememberCurrentGroove()));
 
     // Fill / Trick (variazioni rapide one-shot)
     document.querySelectorAll(".js-fill-kick").forEach(b => b.addEventListener("click", () => this.applyFill("kick")));
