@@ -399,21 +399,17 @@ class KickForgeApp {
   variatePattern() {
     const seq = this.sequencer;
 
-    // CASSA: primo colpo sempre, battere spesso attivo, controtempo vario
-    const nk = new Array(16).fill(0);
-    nk[0] = 1;
-    for (let i = 1; i < 16; i++) {
-      const onBeat = (i % 4 === 0);
-      nk[i] = Math.random() < (onBeat ? 0.85 : 0.3) ? 1 : 0;
-    }
-    if (nk.reduce((a, b) => a + b, 0) < 3) { nk[4] = 1; nk[8] = 1; nk[12] = 1; }
-    seq.kickSteps = nk;
+    // CASSA: SEMPRE il "tunz tunz tunz" — four-on-the-floor, il fondamento di
+    // tutta la famiglia techno. Non si randomizza: varia solo il resto attorno.
+    seq.kickSteps = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0];
+    seq.kickVelocities = [1.0, 0.7, 0.7, 0.7, 0.95, 0.7, 0.7, 0.7, 0.95, 0.7, 0.7, 0.7, 0.95, 0.7, 0.7, 0.7];
 
-    // HI-HAT: levare vario (classico sul 3° sedicesimo di ogni movimento)
+    // HI-HAT: classico levare techno (l'"off-beat" tra un tunz e l'altro),
+    // con qualche 16esimo in più per movimento.
     const nh = new Array(16).fill(0);
     for (let i = 0; i < 16; i++) {
-      const off = (i % 4 === 2);
-      nh[i] = Math.random() < (off ? 0.7 : 0.18) ? 1 : 0;
+      const offbeat = (i % 4 === 2);   // levare: 3° sedicesimo di ogni movimento
+      nh[i] = Math.random() < (offbeat ? 0.85 : 0.2) ? 1 : 0;
     }
     seq.hihatSteps = nh;
 
