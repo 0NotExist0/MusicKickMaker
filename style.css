@@ -2030,8 +2030,47 @@ body {
   text-align: right;
 }
 
-.var-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
-.var-btn { flex: 1 1 auto; min-width: 130px; }
+.var-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.var-btn { flex: 1 1 auto; min-width: 120px; }
+.var-row-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  margin: 2px 0;
+}
+
+.seq-auto {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+}
+.auto-btn { font-weight: 800; white-space: nowrap; }
+.auto-btn.active {
+  background: var(--accent-303);
+  color: #05130a;
+  border-color: var(--accent-303);
+}
+.auto-interval-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.auto-interval-select {
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
 
 .seq-live-var {
   display: inline-flex;

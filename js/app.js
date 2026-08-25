@@ -394,55 +394,99 @@ class KickForgeApp {
     this.uiManager.showToast("🎲 Variazione basso creata", "info");
   }
 
-  // Varia l'ORDINE del groove: pattern di cassa, hi-hat e note/ottave del basso.
-  // Funziona anche in play: il sequencer legge i pattern ad ogni step.
-  variatePattern() {
-    const seq = this.sequencer;
+  // ---- Variazione del RITMO, divisa per traccia -----------------------------
+  // La cassa resta SEMPRE 4/4 (tunz tunz tunz): si aggiungono al massimo dei
+  // ghost kick, mai si tolgono i battere. È il fondamento di tutta la techno.
+  variateKickPattern(silent = false) {
+    const nk = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0];
+    const ghostSlots = [3, 6, 7, 10, 11, 14, 15];
+    const nGhost = Math.floor(Math.random() * 3); // 0, 1 o 2 ghost kick
+    for (let g = 0; g < nGhost; g++) {
+      nk[ghostSlots[Math.floor(Math.random() * ghostSlots.length)]] = 1;
+    }
+    this.sequencer.kickSteps = nk;
+    this.sequencer.kickVelocities = [1.0, 0.7, 0.7, 0.7, 0.95, 0.7, 0.7, 0.7, 0.95, 0.7, 0.7, 0.7, 0.95, 0.7, 0.7, 0.7];
+    this.refreshKickSequencerStepsUI();
+    document.querySelectorAll(".pattern-btn").forEach(b => b.classList.remove("active"));
+    if (!silent) this.uiManager.showToast("🥁 Ritmo cassa variato (sempre 4/4)", "info");
+  }
 
-    // CASSA: SEMPRE il "tunz tunz tunz" — four-on-the-floor, il fondamento di
-    // tutta la famiglia techno. Non si randomizza: varia solo il resto attorno.
-    seq.kickSteps = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0];
-    seq.kickVelocities = [1.0, 0.7, 0.7, 0.7, 0.95, 0.7, 0.7, 0.7, 0.95, 0.7, 0.7, 0.7, 0.95, 0.7, 0.7, 0.7];
-
-    // HI-HAT: classico levare techno (l'"off-beat" tra un tunz e l'altro),
-    // con qualche 16esimo in più per movimento.
+  variateHatsPattern(silent = false) {
     const nh = new Array(16).fill(0);
     for (let i = 0; i < 16; i++) {
-      const offbeat = (i % 4 === 2);   // levare: 3° sedicesimo di ogni movimento
+      const offbeat = (i % 4 === 2); // levare techno
       nh[i] = Math.random() < (offbeat ? 0.85 : 0.2) ? 1 : 0;
     }
-    seq.hihatSteps = nh;
+    this.sequencer.hihatSteps = nh;
+    this.sequencer.hihatEnabled = true;
+    this.refreshHiHatStepsUI();
+    const hatToggle = document.getElementById("toggle-seq-hihat");
+    if (hatToggle) hatToggle.checked = true;
+    if (!silent) this.uiManager.showToast("🎩 Ritmo hi-hat variato", "info");
+  }
 
-    // BASSO: nuovo ordine di note e ottave, restando sulle note già usate (tonalità)
-    const usedRoots = [...new Set(
-      seq.bassPattern.filter(s => s.active).map(s => s.note.replace(/-?\d+/, ""))
-    )];
+  variateBassPattern(silent = false) {
+    const seq = this.sequencer;
+    const usedRoots = [...new Set(seq.bassPattern.filter(s => s.active).map(s => s.note.replace(/-?\d+/, "")))];
     const roots = usedRoots.length ? usedRoots : ["C", "D#", "F", "G", "A#"];
-    const octs = ["1", "2", "2"]; // mix ottava 1 (profonda) e 2
+    const octs = ["1", "2", "2"]; // mix ottava 1/2
     for (let i = 0; i < 16; i++) {
       const s = seq.bassPattern[i];
       s.active = Math.random() < 0.55 ? 1 : 0;
       if (s.active) {
         const root = roots[Math.floor(Math.random() * roots.length)];
         const cand = root + octs[Math.floor(Math.random() * octs.length)];
-        s.note = AVAILABLE_NOTES.includes(cand)
-          ? cand
-          : (AVAILABLE_NOTES.includes(root + "2") ? root + "2" : "C2");
+        s.note = AVAILABLE_NOTES.includes(cand) ? cand : (AVAILABLE_NOTES.includes(root + "2") ? root + "2" : "C2");
         s.accent = Math.random() < 0.4 ? 1 : 0;
         s.slide = Math.random() < 0.3 ? 1 : 0;
-      } else {
-        s.accent = 0;
-        s.slide = 0;
-      }
+      } else { s.accent = 0; s.slide = 0; }
     }
     if (!seq.bassPattern.some(s => s.active)) seq.bassPattern[0].active = 1;
-
-    // Aggiorna la UI (griglie cassa, hi-hat, basso)
-    this.refreshKickSequencerStepsUI();
-    this.refreshHiHatStepsUI();
     this.renderBassSequencerGrid();
-    document.querySelectorAll(".pattern-btn").forEach(b => b.classList.remove("active"));
-    this.uiManager.showToast("🎲 Nuovo groove: cassa, basso (note/ottave) e hi-hat", "info");
+    if (!silent) this.uiManager.showToast("🎸 Ritmo basso variato (note/ottave)", "info");
+  }
+
+  // ---- Modalità AUTO: cambia il groove da solo ogni N battute (sempre 4/4) ---
+  setAuto(on) {
+    this._autoOn = !!on;
+    this._autoBarCount = 0;
+    this._lastAutoStep = -1;
+    const btn = document.getElementById("auto-toggle-btn");
+    if (btn) {
+      btn.classList.toggle("active", this._autoOn);
+      btn.textContent = this._autoOn ? "🔄 AUTO: ON" : "🔄 AUTO: OFF";
+    }
+    if (this._autoOn) {
+      this.uiManager.showToast("🔄 AUTO attivo: il groove cambia da solo (cassa sempre 4/4)", "success");
+      if (!this.sequencer.isPlaying) {
+        const playBtn = document.getElementById("seq-play-btn");
+        if (playBtn) playBtn.click(); // avvia il loop
+      }
+    } else {
+      this.uiManager.showToast("AUTO disattivato", "info");
+    }
+  }
+
+  // Chiamato ad ogni step dal sequencer: gestisce il cambio automatico a inizio battuta.
+  _autoTick(activeStep) {
+    if (!this._autoOn || activeStep < 0) { this._lastAutoStep = activeStep; return; }
+    // nuovo giro di battuta quando torna allo step 0
+    if (activeStep === 0 && this._lastAutoStep !== 0) {
+      this._autoBarCount = (this._autoBarCount || 0) + 1;
+      const interval = this._autoInterval || 4;
+      if (this._autoBarCount % interval === 0) {
+        this.variateBassPattern(true);
+        this.variateHatsPattern(true);
+        if (Math.random() < 0.4) this.variateKickPattern(true); // ogni tanto ghost kick
+        // ogni due cicli, un fill al volo per movimento
+        if (this._autoBarCount % (interval * 2) === 0) {
+          const fills = ["kick", "hats", "bass", "break"];
+          this.applyFill(fills[Math.floor(Math.random() * fills.length)]);
+        }
+        this.uiManager.showToast("🔄 Groove cambiato (auto)", "info");
+      }
+    }
+    this._lastAutoStep = activeStep;
   }
 
   refreshHiHatStepsUI() {
@@ -1186,7 +1230,17 @@ class KickForgeApp {
     // 11. Crea Variazione (tasti in alto + tasti "varia live" nel transport)
     document.querySelectorAll(".js-variate-kick").forEach(b => b.addEventListener("click", () => this.variateKick()));
     document.querySelectorAll(".js-variate-bass").forEach(b => b.addEventListener("click", () => this.variateBass()));
-    document.querySelectorAll(".js-variate-pattern").forEach(b => b.addEventListener("click", () => this.variatePattern()));
+    document.querySelectorAll(".js-ritmo-kick").forEach(b => b.addEventListener("click", () => this.variateKickPattern()));
+    document.querySelectorAll(".js-ritmo-bass").forEach(b => b.addEventListener("click", () => this.variateBassPattern()));
+    document.querySelectorAll(".js-ritmo-hats").forEach(b => b.addEventListener("click", () => this.variateHatsPattern()));
+
+    // Modalità AUTO (cambio groove automatico)
+    this._autoOn = false;
+    this._autoInterval = 4;
+    const autoBtn = document.getElementById("auto-toggle-btn");
+    if (autoBtn) autoBtn.addEventListener("click", () => this.setAuto(!this._autoOn));
+    const autoInterval = document.getElementById("auto-interval");
+    if (autoInterval) autoInterval.addEventListener("change", (e) => { this._autoInterval = parseInt(e.target.value, 10) || 4; });
 
     // Fill / Trick (variazioni rapide one-shot)
     document.querySelectorAll(".js-fill-kick").forEach(b => b.addEventListener("click", () => this.applyFill("kick")));
@@ -1221,6 +1275,8 @@ class KickForgeApp {
   }
 
   updateSequencerUI(activeStep) {
+    this._autoTick(activeStep);
+
     document.querySelectorAll(".seq-step").forEach(btn => {
       const stepIdx = parseInt(btn.dataset.step, 10);
       btn.classList.toggle("current-playing-step", stepIdx === activeStep);

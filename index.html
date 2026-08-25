@@ -139,12 +139,18 @@
       <div class="var-block">
         <div class="mixer-head">
           <span class="var-tag">🎲 VARIAZIONI</span>
-          <span class="mixer-hint">Crea una variazione del suono attuale. Non ti piace? Ricarica il preset.</span>
+          <span class="mixer-hint">Suono (timbro) o Ritmo (pattern), per traccia. La cassa resta sempre 4/4.</span>
         </div>
+        <div class="var-row-label">SUONO</div>
         <div class="var-buttons">
-          <button class="btn btn-secondary var-btn js-variate-kick">🎲 Varia Cassa</button>
-          <button class="btn btn-secondary var-btn js-variate-bass">🎲 Varia Basso</button>
-          <button class="btn btn-secondary var-btn js-variate-pattern" title="Cambia l'ordine del groove: pattern di cassa, hi-hat e note/ottave del basso">🎲 Varia Groove</button>
+          <button class="btn btn-secondary var-btn js-variate-kick">🎛️ Suono Cassa</button>
+          <button class="btn btn-secondary var-btn js-variate-bass">🎛️ Suono Basso</button>
+        </div>
+        <div class="var-row-label">RITMO (pattern)</div>
+        <div class="var-buttons">
+          <button class="btn btn-secondary var-btn js-ritmo-kick" title="Varia il ritmo della cassa mantenendo il 4/4">🥁 Ritmo Cassa</button>
+          <button class="btn btn-secondary var-btn js-ritmo-bass" title="Varia note e ottave del basso">🎸 Ritmo Basso</button>
+          <button class="btn btn-secondary var-btn js-ritmo-hats" title="Varia il pattern degli hi-hat">🎩 Ritmo Hats</button>
         </div>
       </div>
     </section>
@@ -240,10 +246,23 @@
                 <span class="icon">▶</span> ASCOLTA GROOVE (LOOP)
               </button>
               <div class="seq-live-var" title="Varia in tempo reale mentre il loop gira">
-                <span class="live-var-label">🎲 VARIA LIVE:</span>
+                <span class="live-var-label">🎛️ SUONO:</span>
                 <button class="btn btn-mini js-variate-kick">Cassa</button>
                 <button class="btn btn-mini js-variate-bass">Basso</button>
-                <button class="btn btn-mini js-variate-pattern" title="Cambia l'ordine del groove (cassa, basso, hi-hat) in play">Groove</button>
+                <span class="live-var-label">🥁 RITMO:</span>
+                <button class="btn btn-mini js-ritmo-kick">Cassa</button>
+                <button class="btn btn-mini js-ritmo-bass">Basso</button>
+                <button class="btn btn-mini js-ritmo-hats">Hats</button>
+              </div>
+              <div class="seq-auto" title="Cambia il groove automaticamente ogni N battute (la cassa resta sempre 4/4)">
+                <button id="auto-toggle-btn" class="btn btn-mini auto-btn">🔄 AUTO: OFF</button>
+                <label class="auto-interval-label">ogni
+                  <select id="auto-interval" class="auto-interval-select">
+                    <option value="2">2</option>
+                    <option value="4" selected>4</option>
+                    <option value="8">8</option>
+                  </select> battute
+                </label>
               </div>
               <div class="bpm-control-group">
                 <label for="bpm-input" class="mono-label">VELOCITÀ (BPM):</label>
