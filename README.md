@@ -61,7 +61,8 @@ Il generatore AI usa una **Serverless Function** (`api/generate-preset.js`) che 
 |-----------|---------|------|
 | `AI_API_KEY` | — | **Obbligatoria**. La key del provider. |
 | `AI_BASE_URL` | `https://api.groq.com/openai/v1` | Endpoint OpenAI-style. Es. OpenRouter: `https://openrouter.ai/api/v1` |
-| `AI_MODEL` | `llama-3.3-70b-versatile` | Qualsiasi modello del provider (Llama, Qwen, Mistral…). |
+| `AI_MODEL` | `openai/gpt-oss-120b` | Modello open-weight del provider (es. `openai/gpt-oss-20b`, `qwen/qwen3.6-27b`…). |
+| `AI_REASONING_EFFORT` | `low` | Solo per i modelli `gpt-oss`: `low`, `medium` o `high`. |
 
 > Provider alternativi compatibili: **OpenRouter, Together, Fireworks, DeepInfra** o un **Ollama** self-hosted. Basta impostare `AI_BASE_URL` e `AI_MODEL`.
 

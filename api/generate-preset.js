@@ -7,9 +7,10 @@
  * lato server: il client riceve sempre un preset sicuro.
  *
  * Configurazione (Environment Variables su Vercel):
- *   AI_API_KEY   (obbligatoria)  - la tua API key del provider
- *   AI_BASE_URL  (opzionale)     - default https://api.groq.com/openai/v1
- *   AI_MODEL     (opzionale)     - default llama-3.3-70b-versatile
+ *   AI_API_KEY          (obbligatoria)  - la tua API key del provider
+ *   AI_BASE_URL         (opzionale)     - default https://api.groq.com/openai/v1
+ *   AI_MODEL            (opzionale)     - default openai/gpt-oss-120b
+ *   AI_REASONING_EFFORT (opzionale)     - per i modelli gpt-oss: low|medium|high (default low)
  *
  * Provider compatibili (endpoint OpenAI-style /chat/completions):
  *   Groq, OpenRouter, Together, Fireworks, DeepInfra, Ollama (self-host), ...
@@ -171,13 +172,29 @@ module.exports = async (req, res) => {
   }
 
   const baseUrl = (process.env.AI_BASE_URL || "https://api.groq.com/openai/v1").replace(/\/$/, "");
-  const model = process.env.AI_MODEL || "llama-3.3-70b-versatile";
+  const model = process.env.AI_MODEL || "openai/gpt-oss-120b";
 
   const body = await readBody(req);
   const prompt = (body && typeof body.prompt === "string") ? body.prompt.slice(0, 600).trim() : "";
   if (!prompt) {
     res.statusCode = 400;
     return res.end(JSON.stringify({ error: "Prompt mancante." }));
+  }
+
+  // I modelli di reasoning (gpt-oss) consumano token di ragionamento prima del JSON:
+  // serve un budget ampio e uno sforzo di reasoning contenuto.
+  const payload = {
+    model,
+    temperature: 0.75,
+    max_tokens: 4000,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: prompt }
+    ]
+  };
+  if (/gpt-oss/i.test(model)) {
+    payload.reasoning_effort = process.env.AI_REASONING_EFFORT || "low";
   }
 
   try {
@@ -187,16 +204,7 @@ module.exports = async (req, res) => {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        model,
-        temperature: 0.75,
-        max_tokens: 900,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: prompt }
-        ]
-      })
+      body: JSON.stringify(payload)
     });
 
     if (!aiRes.ok) {
