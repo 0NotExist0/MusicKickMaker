@@ -456,6 +456,91 @@ class KickForgeApp {
   }
 
   // ==========================================
+  // FILL / TRICK — variazioni rapide "one-shot"
+  // In play: il fill suona per ~1 battuta poi torna al groove precedente.
+  // Da fermo: viene applicato in modo persistente (così lo vedi/senti).
+  // ==========================================
+  applyFill(type) {
+    const seq = this.sequencer;
+
+    // se un fill è già attivo, ripristina subito prima di lanciarne un altro
+    if (this._fillTimer) { clearTimeout(this._fillTimer); this._fillTimer = null; this._restoreFill(); }
+
+    // snapshot del groove attuale
+    this._fillSnapshot = {
+      kick: seq.kickSteps.slice(),
+      kickVel: seq.kickVelocities.slice(),
+      hihat: seq.hihatSteps.slice(),
+      hihatEnabled: seq.hihatEnabled,
+      bass: JSON.parse(JSON.stringify(seq.bassPattern))
+    };
+
+    const roots = [...new Set(seq.bassPattern.filter(s => s.active).map(s => s.note.replace(/-?\d+/, "")))];
+    const pool = roots.length ? roots : ["C"];
+    const setBass = (i, root, oct, acc, sld) => {
+      const cand = root + oct;
+      seq.bassPattern[i] = {
+        note: AVAILABLE_NOTES.includes(cand) ? cand : (AVAILABLE_NOTES.includes(root + "2") ? root + "2" : "C2"),
+        active: 1, accent: acc ? 1 : 0, slide: sld ? 1 : 0
+      };
+    };
+
+    let label = "Fill";
+    if (type === "kick") {
+      label = "Rullata Cassa";
+      for (let i = 12; i < 16; i++) seq.kickSteps[i] = 1;             // roll di cassa sull'ultima battuta
+      seq.kickVelocities[12] = 0.85; seq.kickVelocities[13] = 0.9;
+      seq.kickVelocities[14] = 0.95; seq.kickVelocities[15] = 1.0;   // crescendo
+    } else if (type === "hats") {
+      label = "Roll Hats";
+      for (let i = 0; i < 16; i++) seq.hihatSteps[i] = 1;            // shimmer 16esimi
+      seq.hihatEnabled = true;
+    } else if (type === "bass") {
+      label = "Rullata Basso";
+      for (let i = 0; i < 16; i++) {
+        const root = pool[i % pool.length];
+        setBass(i, root, (i % 2 === 0) ? "1" : "2", i % 4 === 0, i % 2 === 1); // 16esimi con salti d'ottava
+      }
+    } else if (type === "break") {
+      label = "Break";
+      for (let i = 0; i < 16; i++) {
+        seq.kickSteps[i] = (i % 2 === 0) ? 1 : (Math.random() < 0.5 ? 1 : 0);
+        seq.hihatSteps[i] = 1;
+      }
+      seq.hihatEnabled = true;
+      for (let i = 0; i < 16; i++) {
+        const root = pool[Math.floor(Math.random() * pool.length)];
+        setBass(i, root, (i % 2 ? "2" : "1"), i % 4 === 0, i % 3 === 0);
+      }
+    }
+
+    this.refreshKickSequencerStepsUI();
+    this.refreshHiHatStepsUI();
+    this.renderBassSequencerGrid();
+    this.uiManager.showToast(`💥 ${label}!`, "info");
+
+    // one-shot: in play torna al groove dopo una battuta (4/4)
+    if (seq.isPlaying) {
+      const barMs = (60 / this.currentBpm) * 4 * 1000;
+      this._fillTimer = setTimeout(() => { this._fillTimer = null; this._restoreFill(); }, barMs);
+    }
+  }
+
+  _restoreFill() {
+    if (!this._fillSnapshot) return;
+    const seq = this.sequencer;
+    seq.kickSteps = this._fillSnapshot.kick;
+    seq.kickVelocities = this._fillSnapshot.kickVel;
+    seq.hihatSteps = this._fillSnapshot.hihat;
+    seq.hihatEnabled = this._fillSnapshot.hihatEnabled;
+    seq.bassPattern = this._fillSnapshot.bass;
+    this._fillSnapshot = null;
+    this.refreshKickSequencerStepsUI();
+    this.refreshHiHatStepsUI();
+    this.renderBassSequencerGrid();
+  }
+
+  // ==========================================
   // GESTIONE PRESET BASSO
   // ==========================================
   renderBassCategoryTabs() {
@@ -1106,6 +1191,12 @@ class KickForgeApp {
     document.querySelectorAll(".js-variate-kick").forEach(b => b.addEventListener("click", () => this.variateKick()));
     document.querySelectorAll(".js-variate-bass").forEach(b => b.addEventListener("click", () => this.variateBass()));
     document.querySelectorAll(".js-variate-pattern").forEach(b => b.addEventListener("click", () => this.variatePattern()));
+
+    // Fill / Trick (variazioni rapide one-shot)
+    document.querySelectorAll(".js-fill-kick").forEach(b => b.addEventListener("click", () => this.applyFill("kick")));
+    document.querySelectorAll(".js-fill-hats").forEach(b => b.addEventListener("click", () => this.applyFill("hats")));
+    document.querySelectorAll(".js-fill-bass").forEach(b => b.addEventListener("click", () => this.applyFill("bass")));
+    document.querySelectorAll(".js-fill-break").forEach(b => b.addEventListener("click", () => this.applyFill("break")));
 
     // Hotkeys
     window.addEventListener("keydown", (e) => {

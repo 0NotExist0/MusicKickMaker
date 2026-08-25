@@ -2050,3 +2050,36 @@ body {
   white-space: nowrap;
 }
 .seq-live-var .btn-mini { padding: 5px 10px; }
+
+.seq-fills-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.fills-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent-red);
+  white-space: nowrap;
+}
+.fill-btn {
+  border-color: var(--accent-red-glow);
+}
+.fill-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: var(--accent-red);
+}
+.fill-btn:active { transform: scale(0.96); }
+.fills-hint {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+@media (max-width: 600px) { .fills-hint { display: none; } }
