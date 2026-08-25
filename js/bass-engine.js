@@ -154,5 +154,10 @@ export class BassSynthEngine {
     osc1.stop(now + totalDuration + 0.05);
     osc2.stop(now + totalDuration + 0.05);
     if (subOsc) subOsc.stop(now + totalDuration + 0.05);
+
+    // Pulizia del grafo dopo la fine della nota (solo tempo reale, non offline)
+    if (targetCtx === this.mainEngine.ctx) {
+      this.mainEngine._scheduleDisconnect(bassBus, now + totalDuration + 0.2);
+    }
   }
 }

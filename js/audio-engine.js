@@ -52,7 +52,27 @@ export class KickSynthEngine {
     this.masterLimiter.connect(this.analyserNode);
     this.analyserNode.connect(this.ctx.destination);
 
+    // Auto-recupero mobile: se il contesto viene sospeso/interrotto (notifica,
+    // cambio app, blocco schermo), lo riattiviamo al primo tocco o al ritorno.
+    const tryResume = () => {
+      if (this.ctx && this.ctx.state !== "running") {
+        this.ctx.resume().catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) tryResume(); });
+    document.addEventListener("touchstart", tryResume, { passive: true });
+    document.addEventListener("pointerdown", tryResume, { passive: true });
+
     this.isInitialized = true;
+  }
+
+  // Scollega una voce dal grafo dopo che ha finito di suonare.
+  // Fondamentale su mobile (iOS Safari): senza disconnessione i nodi si
+  // accumulano finché l'audio si spegne. Solo in tempo reale (non offline).
+  _scheduleDisconnect(node, absEndTime) {
+    if (!this.ctx || !node) return;
+    const ms = Math.max(0, (absEndTime - this.ctx.currentTime) * 1000) + 80;
+    setTimeout(() => { try { node.disconnect(); } catch (e) {} }, ms);
   }
 
   // Imposta i livelli del mixer (cassa/basso) in tempo reale
@@ -402,12 +422,12 @@ export class KickSynthEngine {
     const driveType = params.drive_type || "tube";
     const driveAmt = Math.max(0.1, (params.drive_amount || 4.0) * (1 + (superBotta - 1) * 0.3));
     driveShaper.curve = this.getDistortionCurve(driveAmt, driveType);
-    driveShaper.oversample = "4x";
+    driveShaper.oversample = "2x";
 
     const wavefolder = targetCtx.createWaveShaper();
     const foldAmt = Math.max(1.0, (params.fold_amount || 1.0) * (1 + (superBotta - 1) * 0.2));
     wavefolder.curve = this.getWavefoldCurve(foldAmt);
-    wavefolder.oversample = "4x";
+    wavefolder.oversample = "2x";
 
     const eqLow = targetCtx.createBiquadFilter();
     eqLow.type = "lowshelf";
@@ -453,6 +473,15 @@ export class KickSynthEngine {
     punchComp.connect(masterClipper);
     masterClipper.connect(outGain);
     outGain.connect(destination);
+
+    // Pulizia del grafo dopo la fine della voce (solo tempo reale).
+    // Va dopo la coda PIÙ lunga: il rimbombo può durare più del corpo.
+    if (targetCtx === this.ctx) {
+      const rumbleTail = (params.rumble_enabled && (params.rumble_volume || 0) > 0.01)
+        ? Math.max(0.1, params.rumble_decay || 0.35) + 0.25 : 0;
+      const safeEnd = Math.max(totalKickDuration, rumbleTail) + 0.25;
+      this._scheduleDisconnect(outGain, t0 + safeEnd);
+    }
 
     return {
       duration: totalKickDuration
@@ -509,6 +538,8 @@ export class KickSynthEngine {
 
     noise.start(now);
     noise.stop(now + 0.09);
+
+    this._scheduleDisconnect(gain, now + 0.2);
   }
 
   /**
