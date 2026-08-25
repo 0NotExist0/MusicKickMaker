@@ -142,8 +142,8 @@
           <span class="mixer-hint">Crea una variazione del suono attuale. Non ti piace? Ricarica il preset.</span>
         </div>
         <div class="var-buttons">
-          <button id="variate-kick-btn" class="btn btn-secondary var-btn">🎲 Varia Cassa</button>
-          <button id="variate-bass-btn" class="btn btn-secondary var-btn">🎲 Varia Basso</button>
+          <button class="btn btn-secondary var-btn js-variate-kick">🎲 Varia Cassa</button>
+          <button class="btn btn-secondary var-btn js-variate-bass">🎲 Varia Basso</button>
         </div>
       </div>
     </section>
@@ -238,6 +238,11 @@
               <button id="seq-play-btn" class="btn btn-seq-play">
                 <span class="icon">▶</span> ASCOLTA GROOVE (LOOP)
               </button>
+              <div class="seq-live-var" title="Varia il suono mentre il loop gira">
+                <span class="live-var-label">🎲 VARIA LIVE:</span>
+                <button class="btn btn-mini js-variate-kick">Cassa</button>
+                <button class="btn btn-mini js-variate-bass">Basso</button>
+              </div>
               <div class="bpm-control-group">
                 <label for="bpm-input" class="mono-label">VELOCITÀ (BPM):</label>
                 <input type="number" id="bpm-input" min="60" max="280" value="140" class="bpm-number-input">

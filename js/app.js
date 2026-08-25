@@ -382,7 +382,7 @@ class KickForgeApp {
     if (Math.random() < 0.30) p.drive_type = ["tube", "diode", "hard"][Math.floor(Math.random() * 3)];
     if (Math.random() < 0.25) p.body_waveform = Math.random() < 0.5 ? "sine" : "triangle";
     this.applyKickParams(p, this.currentBpm, "🎲 Variazione della cassa — regola e premi 💾 Salva Suono se ti piace.");
-    this.triggerKick();
+    if (!this.sequencer.isPlaying) this.triggerKick(); // in live il loop prende i nuovi parametri da solo
     this.uiManager.showToast("🎲 Variazione cassa creata", "info");
   }
 
@@ -1041,11 +1041,9 @@ class KickForgeApp {
       });
     }
 
-    // 11. Crea Variazione
-    const varKickBtn = document.getElementById("variate-kick-btn");
-    const varBassBtn = document.getElementById("variate-bass-btn");
-    if (varKickBtn) varKickBtn.addEventListener("click", () => this.variateKick());
-    if (varBassBtn) varBassBtn.addEventListener("click", () => this.variateBass());
+    // 11. Crea Variazione (tasti in alto + tasti "varia live" nel transport)
+    document.querySelectorAll(".js-variate-kick").forEach(b => b.addEventListener("click", () => this.variateKick()));
+    document.querySelectorAll(".js-variate-bass").forEach(b => b.addEventListener("click", () => this.variateBass()));
 
     // Hotkeys
     window.addEventListener("keydown", (e) => {

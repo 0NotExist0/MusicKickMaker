@@ -39,7 +39,17 @@ export class KickSynthEngine {
     this.kickBus.connect(this.masterGainNode);
     this.bassBus.connect(this.masterGainNode);
 
-    this.masterGainNode.connect(this.analyserNode);
+    // Limiter master: cattura i picchi quando cassa+basso+hi-hat si sovrappongono,
+    // evitando il clipping brutale che su mobile può azzerare l'audio.
+    this.masterLimiter = this.ctx.createDynamicsCompressor();
+    this.masterLimiter.threshold.value = -1.5;
+    this.masterLimiter.knee.value = 0;
+    this.masterLimiter.ratio.value = 20;
+    this.masterLimiter.attack.value = 0.001;
+    this.masterLimiter.release.value = 0.12;
+
+    this.masterGainNode.connect(this.masterLimiter);
+    this.masterLimiter.connect(this.analyserNode);
     this.analyserNode.connect(this.ctx.destination);
 
     this.isInitialized = true;

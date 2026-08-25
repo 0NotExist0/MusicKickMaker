@@ -167,12 +167,19 @@ export class StepSequencer {
   start() {
     if (this.isPlaying) return;
     this.audioEngine.init();
-    this.audioEngine.resumeIfNeeded();
 
+    // isPlaying va impostato subito (l'UI si aggiorna sul valore di toggle()),
+    // ma lo scheduling parte SOLO dopo che il contesto è davvero attivo:
+    // su mobile il contesto è sospeso finché non c'è un gesto, e schedulare
+    // prima del resume accumula tutte le note a tempo 0 (burst/glitch).
     this.isPlaying = true;
     this.currentStep = 0;
-    this.nextNoteTime = this.audioEngine.ctx.currentTime + 0.05;
-    this.scheduler();
+
+    Promise.resolve(this.audioEngine.resumeIfNeeded()).then(() => {
+      if (!this.isPlaying) return; // fermato nel frattempo
+      this.nextNoteTime = this.audioEngine.ctx.currentTime + 0.1;
+      this.scheduler();
+    });
   }
 
   stop() {
