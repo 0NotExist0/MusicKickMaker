@@ -1867,6 +1867,38 @@ body {
 
 .ai-gen-btn:disabled { opacity: 0.6; cursor: wait; }
 
+.ai-target-row { display: flex; align-items: center; gap: 10px; }
+.ai-target-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.ai-target-group {
+  display: inline-flex;
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 3px;
+  gap: 2px;
+}
+.ai-target-btn {
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 6px 16px;
+  color: var(--text-secondary);
+  font-family: var(--font-main);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ai-target-btn.active {
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+  color: #fff;
+}
+
 .ai-gen-examples {
   display: flex;
   align-items: center;

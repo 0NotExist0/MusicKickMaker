@@ -285,9 +285,12 @@ export class KickSynthEngine {
     if (params.body_enabled) {
       const bodyGain = targetCtx.createGain();
       const bodyVol = (params.body_volume || 1.0) * (1 + (superBotta - 1) * 0.35);
+      // Livello della coda: quanto è forte la parte lunga rispetto al pugno iniziale
+      const tailLevel = Math.min(1.5, Math.max(0.05, params.body_tailLevel ?? 1.0));
       bodyGain.gain.setValueAtTime(0.0001, now);
       bodyGain.gain.linearRampToValueAtTime(bodyVol, now + 0.0015);
       bodyGain.gain.setValueAtTime(bodyVol, now + punchDecay * 0.55);
+      bodyGain.gain.exponentialRampToValueAtTime(Math.max(0.0001, bodyVol * tailLevel), now + punchDecay);
       bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + punchDecay + tailDecay);
 
       const bodyOsc = targetCtx.createOscillator();

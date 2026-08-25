@@ -280,9 +280,11 @@ class KickForgeApp {
     }
   }
 
-  async generateWithAI(prompt) {
-    const btn = document.getElementById("ai-generate-btn");
-    const label = btn?.querySelector(".ai-btn-label");
+  async generateWithAI(prompt, opts = {}) {
+    const target = opts.target === "bass" ? "bass" : "kick";
+    const tweak = !!opts.tweak;
+    const genBtn = document.getElementById("ai-generate-btn");
+    const modBtn = document.getElementById("ai-modify-btn");
     const status = document.getElementById("ai-gen-status");
     const setStatus = (msg, type) => {
       if (!status) return;
@@ -290,16 +292,20 @@ class KickForgeApp {
       status.className = `ai-gen-status ${type ? "status-" + type : ""}`;
       status.style.display = msg ? "block" : "none";
     };
+    const targetLabel = target === "bass" ? "basso" : "cassa";
 
-    if (btn) btn.disabled = true;
-    if (label) label.textContent = "Genero…";
-    setStatus("🎛️ L'AI sta progettando la cassa…", "info");
+    [genBtn, modBtn].forEach(b => { if (b) b.disabled = true; });
+    setStatus(`🎛️ L'AI sta ${tweak ? "modificando" : "progettando"} il ${targetLabel}…`, "info");
 
     try {
+      const current = tweak
+        ? { params: target === "bass" ? this.currentBassParams : this.currentKickParams }
+        : undefined;
+
       const res = await fetch("/api/generate-preset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt })
+        body: JSON.stringify({ prompt, target, current })
       });
 
       const contentType = res.headers.get("content-type") || "";
@@ -313,17 +319,21 @@ class KickForgeApp {
         throw new Error(data.hint ? `${data.error} ${data.hint}` : (data.error || "Errore di generazione."));
       }
 
-      this.applyKickParams(data.params, data.bpm, `🤖 ${data.name} — generata dall'AI (${data.model || "modello"}).`);
-      this.triggerKick();
-      setStatus(`✅ "${data.name}" generata! Rifinisci a mano e premi 💾 Salva Suono per tenerla.`, "success");
-      this.uiManager.showToast(`Cassa AI generata: ${data.name}`, "success");
+      if ((data.target || target) === "bass") {
+        this.applyBassParams(data.params);
+      } else {
+        this.applyKickParams(data.params, data.bpm, `🤖 ${data.name} — ${tweak ? "modificata" : "generata"} dall'AI (${data.model || "modello"}).`);
+        this.triggerKick();
+      }
+
+      setStatus(`✅ "${data.name}" ${tweak ? "modificato" : "generato"}! Rifinisci e premi 💾 Salva Suono per tenerlo.`, "success");
+      this.uiManager.showToast(`AI: ${data.name}`, "success");
     } catch (err) {
       console.error("AI generate error:", err);
       setStatus(`⚠️ ${err.message}`, "error");
-      this.uiManager.showToast("Generazione AI non riuscita.", "error");
+      this.uiManager.showToast("Operazione AI non riuscita.", "error");
     } finally {
-      if (btn) btn.disabled = false;
-      if (label) label.textContent = "Genera Cassa";
+      [genBtn, modBtn].forEach(b => { if (b) b.disabled = false; });
     }
   }
 
@@ -967,28 +977,43 @@ class KickForgeApp {
       });
     }
 
-    // 9. Generatore AI
-    const aiBtn = document.getElementById("ai-generate-btn");
+    // 9. Generatore AI (cassa / basso, genera o modifica)
     const aiInput = document.getElementById("ai-prompt-input");
-    const runAI = () => {
-      const prompt = (aiInput?.value || "").trim();
-      if (!prompt) {
-        this.uiManager.showToast("Scrivi prima cosa vuoi generare.", "info");
-        aiInput?.focus();
-        return;
-      }
-      this.generateWithAI(prompt);
+    this.aiTarget = "kick";
+
+    const setAiTarget = (t) => {
+      this.aiTarget = t === "bass" ? "bass" : "kick";
+      document.querySelectorAll(".ai-target-btn").forEach(b => b.classList.toggle("active", b.dataset.target === this.aiTarget));
     };
-    if (aiBtn) aiBtn.addEventListener("click", runAI);
+    document.querySelectorAll(".ai-target-btn").forEach(btn => {
+      btn.addEventListener("click", () => setAiTarget(btn.dataset.target));
+    });
+
+    const getPrompt = () => (aiInput?.value || "").trim();
+    const needPrompt = () => {
+      if (!getPrompt()) {
+        this.uiManager.showToast("Scrivi prima cosa vuoi.", "info");
+        aiInput?.focus();
+        return false;
+      }
+      return true;
+    };
+
+    const aiGenBtn = document.getElementById("ai-generate-btn");
+    const aiModBtn = document.getElementById("ai-modify-btn");
+    if (aiGenBtn) aiGenBtn.addEventListener("click", () => { if (needPrompt()) this.generateWithAI(getPrompt(), { target: this.aiTarget, tweak: false }); });
+    if (aiModBtn) aiModBtn.addEventListener("click", () => { if (needPrompt()) this.generateWithAI(getPrompt(), { target: this.aiTarget, tweak: true }); });
     if (aiInput) {
       aiInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") { e.preventDefault(); runAI(); }
+        if (e.key === "Enter") { e.preventDefault(); if (needPrompt()) this.generateWithAI(getPrompt(), { target: this.aiTarget, tweak: false }); }
       });
     }
+
     document.querySelectorAll(".ai-example-chip").forEach(chip => {
       chip.addEventListener("click", () => {
         if (aiInput) aiInput.value = chip.dataset.prompt || "";
-        runAI();
+        setAiTarget(chip.dataset.target || "kick");
+        this.generateWithAI(getPrompt(), { target: this.aiTarget, tweak: false });
       });
     });
 

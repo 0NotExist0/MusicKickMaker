@@ -212,6 +212,13 @@ export const CONTROL_TOOLTIPS = {
     ifLow: "La cassa si ferma subito, diventando cortissima ed evitando sovrapposizioni a BPM alti.",
     tip: "💡 Se suoni a 200+ BPM usa code corte (0.2s); a 135 BPM usa code più lunghe (0.35s-0.5s)."
   },
+  body_tailLevel: {
+    title: "LIVELLO CODA CASSA (Tail Level)",
+    what: "Quanto è forte la parte lunga della cassa (la coda) rispetto al pugno iniziale.",
+    ifHigh: "Coda piena e presente: cassa più 'boomy', profonda e sostenuta.",
+    ifLow: "Coda quasi assente: cassa secca e percussiva, tutta pugno.",
+    tip: "💡 Alza per techno profonda e hardcore corposo; abbassa per uptempo/frenchcore secchi."
+  },
   fm_amount: {
     title: "TIMBRO METALLICO (FM Amount Cassa)",
     what: "Quantità di modulazione di frequenza applicata per dare un timbro ruvido e metallico.",

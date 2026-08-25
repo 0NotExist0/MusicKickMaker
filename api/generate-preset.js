@@ -1,27 +1,29 @@
 /**
- * KickForge 303 - Generatore preset cassa con AI (Serverless Function per Vercel)
+ * KickForge 303 - Generatore preset con AI (Serverless Function per Vercel)
  *
- * Riceve un prompt in linguaggio naturale e chiede a un LLM open-source
- * (default: Llama 3.3 70B su Groq) di restituire un set di parametri validi
- * per il motore della cassa. I parametri vengono validati e "clampati"
- * lato server: il client riceve sempre un preset sicuro.
+ * Genera o MODIFICA i parametri di una CASSA o di un BASSO a partire da un
+ * prompt in linguaggio naturale, tramite un LLM open-source (endpoint
+ * compatibile OpenAI). I parametri vengono validati e "clampati" lato server.
  *
- * Configurazione (Environment Variables su Vercel):
- *   AI_API_KEY          (obbligatoria)  - la tua API key del provider
- *   AI_BASE_URL         (opzionale)     - default https://api.groq.com/openai/v1
- *   AI_MODEL            (opzionale)     - default openai/gpt-oss-120b
- *   AI_REASONING_EFFORT (opzionale)     - per i modelli gpt-oss: low|medium|high (default low)
+ * Body della richiesta (POST):
+ *   { prompt: string, target?: "kick"|"bass", current?: { params: {...} } }
+ *   - target: cosa generare (default "kick")
+ *   - current: se presente, si lavora in modalità MODIFICA partendo da questi
+ *              parametri (variazione a parole), altrimenti generazione da zero.
  *
- * Provider compatibili (endpoint OpenAI-style /chat/completions):
- *   Groq, OpenRouter, Together, Fireworks, DeepInfra, Ollama (self-host), ...
+ * Environment Variables:
+ *   AI_API_KEY          (obbligatoria)
+ *   AI_BASE_URL         (opzionale, default https://api.groq.com/openai/v1)
+ *   AI_MODEL            (opzionale, default openai/gpt-oss-120b)
+ *   AI_REASONING_EFFORT (opzionale, per gpt-oss: low|medium|high, default low)
  */
 
-// Schema autorevole: nomi, range numerici, enum e booleani ammessi.
 const NUM = (min, max) => ({ type: "num", min, max });
 const ENUM = (values) => ({ type: "enum", values });
 const BOOL = { type: "bool" };
 
-const SCHEMA = {
+// ---- Schema CASSA -------------------------------------------------------
+const KICK_SCHEMA = {
   super_botta: NUM(1.0, 3.0),
   extreme_mode: BOOL,
 
@@ -60,6 +62,7 @@ const SCHEMA = {
   body_tailFreq: NUM(30, 85),
   body_punchDecay: NUM(0.01, 0.09),
   body_tailDecay: NUM(0.08, 0.65),
+  body_tailLevel: NUM(0.05, 1.5),
   body_volume: NUM(0, 1),
   fm_amount: NUM(0, 300),
   fm_ratio: NUM(0.5, 6),
@@ -81,17 +84,34 @@ const SCHEMA = {
   master_gain: NUM(0.5, 1.6)
 };
 
+// ---- Schema BASSO -------------------------------------------------------
+const BASS_SCHEMA = {
+  bass_enabled: BOOL,
+  bass_osc1_wave: ENUM(["sawtooth", "square", "sine", "triangle"]),
+  bass_osc2_wave: ENUM(["sawtooth", "square", "sine", "triangle"]),
+  bass_osc2_mix: NUM(0, 1),
+  bass_detune: NUM(0, 35),
+  bass_cutoff: NUM(80, 7000),
+  bass_resonance: NUM(1, 22),
+  bass_envMod: NUM(0, 1),
+  bass_decay: NUM(0.04, 0.45),
+  bass_drive: NUM(0.5, 10),
+  bass_glide: NUM(0.01, 0.2),
+  bass_sidechain: NUM(0, 1),
+  bass_sub_level: NUM(0, 1),
+  bass_volume: NUM(0, 1)
+};
+
 const clampNum = (v, min, max) => {
   const n = Number(v);
   if (!isFinite(n)) return null;
   return Math.min(max, Math.max(min, n));
 };
 
-// Filtra e normalizza l'output del modello contro lo SCHEMA.
-function sanitizeParams(raw) {
+function sanitizeParams(raw, schema) {
   const out = {};
   if (!raw || typeof raw !== "object") return out;
-  for (const [key, rule] of Object.entries(SCHEMA)) {
+  for (const [key, rule] of Object.entries(schema)) {
     if (!(key in raw)) continue;
     const val = raw[key];
     if (rule.type === "num") {
@@ -106,10 +126,19 @@ function sanitizeParams(raw) {
   return out;
 }
 
-// Descrizione compatta dello schema da mettere nel prompt di sistema.
-function schemaForPrompt() {
+// Filtra i parametri correnti tenendo solo le chiavi valide dello schema.
+function pickKnown(raw, schema) {
+  const out = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const key of Object.keys(schema)) {
+    if (key in raw) out[key] = raw[key];
+  }
+  return out;
+}
+
+function schemaForPrompt(schema) {
   const lines = [];
-  for (const [key, rule] of Object.entries(SCHEMA)) {
+  for (const [key, rule] of Object.entries(schema)) {
     if (rule.type === "num") lines.push(`  "${key}": number ${rule.min}..${rule.max}`);
     else if (rule.type === "bool") lines.push(`  "${key}": boolean`);
     else if (rule.type === "enum") lines.push(`  "${key}": one of ${JSON.stringify(rule.values)}`);
@@ -117,25 +146,51 @@ function schemaForPrompt() {
   return lines.join(",\n");
 }
 
-const SYSTEM_PROMPT = `You are a sound-design expert for KickForge 303, a web synthesizer that builds hardcore/techno KICK drums.
-Given a user's request (any language), output ONE JSON object describing the kick preset.
+const KICK_GUIDE = `- "screech_*" is the laser/piep layer: enable it for uptempo/frenchcore "laser" sounds. Descending laser = screech_pitchStart much higher than screech_pitchEnd; invert for an ascending piep.
+- "punch_amount" (0..1) adds an attack beater; raise it (0.5..0.9) with comp_attack ~6-10 for more punch.
+- "body_tailLevel" and "body_tailDecay" shape the kick TAIL: raise them for a longer/boomier tail, lower for a short punchy kick.
+- Genre hints: Techno/Acid super_botta 1.4-1.8; Hardcore/Gabber 2.0-2.4 (drive_type tube/diode); Uptempo/Frenchcore 2.0-2.5 (drive_type hard, screech_enabled true, high fold_amount).`;
 
-Return ONLY valid JSON with this exact shape:
-{
+const BASS_GUIDE = `- "bass_sidechain" (0..1) ducks the bass under the kick: keep 0.7-0.9 for a clean groove.
+- "bass_resonance" + "bass_envMod" give the acid 303 squelch; "bass_detune" + "bass_osc2_mix" give a wide Reese.
+- "bass_sub_level" adds a pure sub sine one octave down; "bass_glide" is the 303 slide time.
+- Genre hints: Acid 303 -> high resonance/envMod, sawtooth; Rolling techno -> short decay, moderate resonance; Reese/Industrial -> high detune + osc2_mix; Uptempo Zaag -> high drive + square.`;
+
+function buildSystemPrompt(target, isTweak) {
+  const isBass = target === "bass";
+  const schema = isBass ? BASS_SCHEMA : KICK_SCHEMA;
+  const thing = isBass ? "BASS line" : "KICK drum";
+  const guide = isBass ? BASS_GUIDE : KICK_GUIDE;
+  const shape = isBass
+    ? `{
+  "name": string (short, catchy, may include one emoji),
+  "params": {
+${schemaForPrompt(schema)}
+  }
+}`
+    : `{
   "name": string (short, catchy, may include one emoji),
   "bpm": number 60..260,
   "params": {
-${schemaForPrompt()}
+${schemaForPrompt(schema)}
   }
-}
+}`;
+
+  const task = isTweak
+    ? `You MODIFY an existing ${thing} preset for KickForge 303 based on the user's instruction.
+You will receive the CURRENT parameters. Apply ONLY the change the user asks for, keep everything else as close as possible to the current values. Return the FULL params object.`
+    : `You are a sound-design expert for KickForge 303. Given the user's request (any language), design a ${thing} preset.`;
+
+  return `${task}
+
+Return ONLY valid JSON with this exact shape:
+${shape}
 
 Rules:
-- Include only keys you intentionally set; omit the rest (defaults will fill in).
-- Stay within the numeric ranges. Never invent keys.
-- "screech_*" is the laser/piep layer: set screech_enabled true for uptempo/frenchcore "laser" sounds. For a DESCENDING laser make screech_pitchStart much higher than screech_pitchEnd; invert them for an ASCENDING piep.
-- "punch_amount" (0..1) adds an attack beater; raise it (0.5..0.9) plus comp_attack ~6-10 for more punch.
-- Genre hints: Techno/Acid super_botta 1.4-1.8; Hardcore/Gabber 2.0-2.4 with drive_type tube/diode; Uptempo/Frenchcore 2.0-2.5, drive_type hard, screech_enabled true, high fold_amount.
+- Stay within the numeric ranges. Never invent keys. Only use keys listed above.
+${guide}
 - Output must be strictly parseable JSON, no comments, no markdown fences.`;
+}
 
 async function readBody(req) {
   if (req.body) {
@@ -147,9 +202,7 @@ async function readBody(req) {
   return await new Promise((resolve) => {
     let data = "";
     req.on("data", (c) => (data += c));
-    req.on("end", () => {
-      try { resolve(JSON.parse(data || "{}")); } catch { resolve({}); }
-    });
+    req.on("end", () => { try { resolve(JSON.parse(data || "{}")); } catch { resolve({}); } });
     req.on("error", () => resolve({}));
   });
 }
@@ -176,70 +229,83 @@ module.exports = async (req, res) => {
 
   const body = await readBody(req);
   const prompt = (body && typeof body.prompt === "string") ? body.prompt.slice(0, 600).trim() : "";
+  const target = body && body.target === "bass" ? "bass" : "kick";
+  const schema = target === "bass" ? BASS_SCHEMA : KICK_SCHEMA;
+  const currentParams = body && body.current ? pickKnown(body.current.params || body.current, schema) : null;
+  const isTweak = !!currentParams && Object.keys(currentParams).length > 0;
+
   if (!prompt) {
     res.statusCode = 400;
     return res.end(JSON.stringify({ error: "Prompt mancante." }));
   }
 
-  // I modelli di reasoning (gpt-oss) consumano token di ragionamento prima del JSON:
-  // serve un budget ampio e uno sforzo di reasoning contenuto.
+  const userContent = isTweak
+    ? `CURRENT parameters (JSON):\n${JSON.stringify(currentParams)}\n\nInstruction: ${prompt}`
+    : prompt;
+
   const payload = {
     model,
     temperature: 0.75,
-    max_tokens: 4000,
+    max_tokens: 6000,
     response_format: { type: "json_object" },
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: prompt }
+      { role: "system", content: buildSystemPrompt(target, isTweak) },
+      { role: "user", content: userContent }
     ]
   };
   if (/gpt-oss/i.test(model)) {
     payload.reasoning_effort = process.env.AI_REASONING_EFFORT || "low";
   }
 
-  try {
-    const aiRes = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!aiRes.ok) {
-      const errText = await aiRes.text();
-      res.statusCode = 502;
-      return res.end(JSON.stringify({ error: "Errore dal provider AI.", detail: errText.slice(0, 500) }));
-    }
-
-    const data = await aiRes.json();
-    const content = data?.choices?.[0]?.message?.content || "{}";
-
-    let parsed;
+  // I modelli di reasoning (gpt-oss) ogni tanto falliscono il JSON mode quando il
+  // ragionamento esaurisce i token: riproviamo una volta prima di arrenderci.
+  let lastErr = "";
+  for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      parsed = JSON.parse(content);
-    } catch {
-      // fallback: estrai il primo blocco {...}
-      const m = content.match(/\{[\s\S]*\}/);
-      parsed = m ? JSON.parse(m[0]) : {};
+      const aiRes = await fetch(`${baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+        body: JSON.stringify(payload)
+      });
+
+      if (!aiRes.ok) {
+        lastErr = (await aiRes.text()).slice(0, 500);
+        continue;
+      }
+
+      const data = await aiRes.json();
+      const content = data?.choices?.[0]?.message?.content || "{}";
+
+      let parsed;
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        const m = content.match(/\{[\s\S]*\}/);
+        parsed = m ? JSON.parse(m[0]) : {};
+      }
+
+      const params = sanitizeParams(parsed.params || parsed, schema);
+      if (Object.keys(params).length === 0) {
+        lastErr = "Il modello non ha prodotto parametri validi.";
+        continue;
+      }
+
+      const name = (typeof parsed.name === "string" && parsed.name.trim())
+        ? parsed.name.trim().slice(0, 60)
+        : (target === "bass" ? "🤖 Basso AI" : "🤖 Cassa AI");
+
+      const result = { name, params, model, target };
+      if (target !== "bass") {
+        result.bpm = clampNum(parsed.bpm, 60, 260) ?? 175;
+      }
+
+      res.statusCode = 200;
+      return res.end(JSON.stringify(result));
+    } catch (err) {
+      lastErr = String(err).slice(0, 300);
     }
-
-    const params = sanitizeParams(parsed.params || parsed);
-    const bpm = clampNum(parsed.bpm, 60, 260) ?? 175;
-    const name = (typeof parsed.name === "string" && parsed.name.trim())
-      ? parsed.name.trim().slice(0, 60)
-      : "🤖 Cassa AI";
-
-    if (Object.keys(params).length === 0) {
-      res.statusCode = 422;
-      return res.end(JSON.stringify({ error: "Il modello non ha prodotto parametri validi. Riprova con un prompt più specifico." }));
-    }
-
-    res.statusCode = 200;
-    return res.end(JSON.stringify({ name, bpm, params, model }));
-  } catch (err) {
-    res.statusCode = 500;
-    return res.end(JSON.stringify({ error: "Errore interno durante la generazione.", detail: String(err).slice(0, 300) }));
   }
+
+  res.statusCode = 502;
+  return res.end(JSON.stringify({ error: "L'AI non è riuscita a generare un preset valido. Riprova.", detail: lastErr }));
 };

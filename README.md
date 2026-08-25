@@ -21,7 +21,7 @@ Un sintetizzatore audio Web Audio API ad alte prestazioni per creare colpi di ca
   - Traccia Charleston / Hi-Hat in levare.
 - 🎚️ **Mixer Cassa/Basso + Sidechain reale**: Bilancia il volume di cassa e basso tra loro con bus dedicati, e il *ducking sidechain* del basso ora è realmente agganciato ai colpi di cassa (pompaggio automatico per un mix pulito). Include la manopola *Mix Osc 2* del basso.
 - 🎲 **Crea Variazione**: Un click genera una variazione musicale del suono attuale (cassa o basso) senza dover regolare ogni manopola — per esplorare in fretta.
-- 🤖 **Generatore Cassa con AI**: Descrivi il suono a parole ("cassa uptempo con laser discendente e punch estremo a 200 BPM") e un LLM open-source imposta tutti i parametri per te. Vedi la sezione *Configurazione AI* sotto.
+- 🤖 **AI: Genera & Modifica (Cassa e Basso)**: Descrivi il suono ("cassa uptempo con laser discendente e punch estremo a 200 BPM") e un LLM open-source imposta tutti i parametri. Funziona sia sulla **cassa** che sul **basso**, e in modalità **Modifica** cambi il suono attuale a parole ("coda più lunga, meno acido"). Vedi la sezione *Configurazione AI* sotto.
 - 💾 **Preset Modificabili**: Salva, **sovrascrivi** (Salva Modifiche), **duplica** qualsiasi preset (anche di fabbrica) come copia modificabile, ed **esporta/importa** i preset come file `.json`.
 - 💡 **Guida Interattiva con Hover di 2 Secondi**: Passa il mouse su qualsiasi controllo per vedere la spiegazione dettagliata in italiano.
 - 📥 **Esportazione Audio Professionale WAV (24-bit / 16-bit / 32-bit Float)**:

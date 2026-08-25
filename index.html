@@ -77,24 +77,38 @@
       <div class="ai-gen-header">
         <span class="ai-badge">🤖 AI</span>
         <div class="ai-gen-title-wrap">
-          <h2 class="ai-gen-title">Genera una cassa dal testo</h2>
-          <p class="ai-gen-sub">Descrivi il suono che vuoi: l'AI imposta tutti i parametri per te. Poi rifinisci a mano e salvalo.</p>
+          <h2 class="ai-gen-title">Genera o modifica dal testo</h2>
+          <p class="ai-gen-sub">Descrivi il suono o la modifica che vuoi: l'AI imposta i parametri per te. Poi rifinisci a mano e salva.</p>
         </div>
       </div>
+
+      <div class="ai-target-row">
+        <span class="ai-target-label">Su cosa:</span>
+        <div class="ai-target-group">
+          <button class="ai-target-btn active" data-target="kick">🥁 Cassa</button>
+          <button class="ai-target-btn" data-target="bass">🎸 Basso</button>
+        </div>
+      </div>
+
       <div class="ai-gen-body">
         <input type="text" id="ai-prompt-input" class="ai-prompt-input"
-               placeholder="es. cassa uptempo con laser discendente e punch estremo a 200 BPM"
+               placeholder="Genera: 'cassa uptempo laser…'  •  Modifica: 'coda più lunga, meno acida'"
                maxlength="600" autocomplete="off">
-        <button id="ai-generate-btn" class="btn btn-primary btn-glow ai-gen-btn">
-          <span class="btn-icon">✨</span> <span class="ai-btn-label">Genera Cassa</span>
+        <button id="ai-generate-btn" class="btn btn-primary btn-glow ai-gen-btn" title="Crea un suono nuovo dal testo">
+          <span class="btn-icon">✨</span> Genera
+        </button>
+        <button id="ai-modify-btn" class="btn btn-secondary ai-gen-btn" title="Modifica il suono attuale in base al testo (variazione a parole)">
+          <span class="btn-icon">✏️</span> Modifica
         </button>
       </div>
+
       <div class="ai-gen-examples">
         <span class="ai-ex-label">Prova:</span>
-        <button class="ai-example-chip" data-prompt="cassa uptempo con laser discendente acutissimo e punch estremo a 200 BPM">🔫 Uptempo laser</button>
-        <button class="ai-example-chip" data-prompt="cassa gabber Rotterdam anni 90 calda e distorta a 170 BPM">💀 Gabber '90</button>
-        <button class="ai-example-chip" data-prompt="kick techno industriale cupa e profonda con rimbombo warehouse a 135 BPM">🏭 Industrial deep</button>
-        <button class="ai-example-chip" data-prompt="cassa frenchcore galoppante rimbalzante con laser tonale a 205 BPM">🚀 Frenchcore</button>
+        <button class="ai-example-chip" data-target="kick" data-prompt="cassa uptempo con laser discendente acutissimo e punch estremo a 200 BPM">🔫 Uptempo laser</button>
+        <button class="ai-example-chip" data-target="kick" data-prompt="cassa gabber Rotterdam anni 90 calda e distorta a 170 BPM">💀 Gabber '90</button>
+        <button class="ai-example-chip" data-target="kick" data-prompt="kick techno industriale cupa e profonda con rimbombo warehouse a 135 BPM">🏭 Industrial deep</button>
+        <button class="ai-example-chip" data-target="bass" data-prompt="basso 303 acidcore squelchy con tanta risonanza e slide">🧪 Basso acid 303</button>
+        <button class="ai-example-chip" data-target="bass" data-prompt="basso reese largo e minaccioso industriale con molto detune">🏭 Reese largo</button>
       </div>
       <p id="ai-gen-status" class="ai-gen-status" style="display:none;"></p>
     </section>
@@ -764,19 +778,6 @@
               <div class="knob-value">150Hz</div>
             </div>
 
-            <div class="rotary-knob" data-param="body_tailFreq" data-min="30" data-max="85" data-step="1" data-default="50" data-unit="Hz">
-              <div class="knob-label">NOTA DEL BASSO</div>
-              <div class="knob-sublabel">Intonazione sub</div>
-              <div class="knob-graphic">
-                <svg class="knob-arc" viewBox="0 0 50 50">
-                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
-                  <circle class="knob-arc-fill fill-amber" cx="25" cy="25" r="20"></circle>
-                </svg>
-                <div class="knob-dial"><div class="knob-pointer pointer-amber"></div></div>
-              </div>
-              <div class="knob-value">50Hz</div>
-            </div>
-
             <div class="rotary-knob" data-param="body_punchDecay" data-min="0.01" data-max="0.09" data-step="0.002" data-default="0.038" data-unit="s">
               <div class="knob-label">VELOCITÀ BOTTA</div>
               <div class="knob-sublabel">Secca o allungata</div>
@@ -788,19 +789,6 @@
                 <div class="knob-dial"><div class="knob-pointer pointer-amber"></div></div>
               </div>
               <div class="knob-value">0.038s</div>
-            </div>
-
-            <div class="rotary-knob" data-param="body_tailDecay" data-min="0.08" data-max="0.65" data-step="0.01" data-default="0.30" data-unit="s">
-              <div class="knob-label">LUNGHEZZA CODA</div>
-              <div class="knob-sublabel">Durata del basso</div>
-              <div class="knob-graphic">
-                <svg class="knob-arc" viewBox="0 0 50 50">
-                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
-                  <circle class="knob-arc-fill fill-amber" cx="25" cy="25" r="20"></circle>
-                </svg>
-                <div class="knob-dial"><div class="knob-pointer pointer-amber"></div></div>
-              </div>
-              <div class="knob-value">0.30s</div>
             </div>
 
             <div class="rotary-knob" data-param="fm_amount" data-min="0" data-max="300" data-step="5" data-default="90" data-unit="FM">
@@ -840,6 +828,63 @@
                 <div class="knob-dial"><div class="knob-pointer pointer-amber"></div></div>
               </div>
               <div class="knob-value">1.00</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- MODULO 2B: CODA DELLA CASSA (TAIL) -->
+      <article class="synth-module module-body">
+        <div class="module-header header-body">
+          <div class="module-title-wrap">
+            <span class="body-badge">CODA CASSA</span>
+            <h2 class="module-title">🎯 CODA & SUSTAIN DELLA CASSA</h2>
+          </div>
+        </div>
+
+        <p class="module-description-hint">
+          💡 La parte lunga della cassa, dopo il pugno iniziale. <strong>Livello Coda</strong> = quanto è forte; <strong>Lunghezza Coda</strong> = quanto dura; <strong>Intonazione Coda</strong> = la nota grave su cui si assesta. Per più coda alza livello e lunghezza; per una cassa secca abbassali. (Il modulo RIMBOMBO qui sotto aggiunge sub e rimbombo extra.)
+        </p>
+
+        <div class="module-body">
+          <div class="knobs-grid">
+            <div class="rotary-knob" data-param="body_tailLevel" data-min="0.05" data-max="1.5" data-step="0.05" data-default="1.0" data-unit="x">
+              <div class="knob-label">LIVELLO CODA</div>
+              <div class="knob-sublabel">Quanto è forte</div>
+              <div class="knob-graphic">
+                <svg class="knob-arc" viewBox="0 0 50 50">
+                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                  <circle class="knob-arc-fill fill-amber" cx="25" cy="25" r="20"></circle>
+                </svg>
+                <div class="knob-dial"><div class="knob-pointer pointer-amber"></div></div>
+              </div>
+              <div class="knob-value">1.00x</div>
+            </div>
+
+            <div class="rotary-knob" data-param="body_tailDecay" data-min="0.08" data-max="0.65" data-step="0.01" data-default="0.30" data-unit="s">
+              <div class="knob-label">LUNGHEZZA CODA</div>
+              <div class="knob-sublabel">Quanto dura</div>
+              <div class="knob-graphic">
+                <svg class="knob-arc" viewBox="0 0 50 50">
+                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                  <circle class="knob-arc-fill fill-amber" cx="25" cy="25" r="20"></circle>
+                </svg>
+                <div class="knob-dial"><div class="knob-pointer pointer-amber"></div></div>
+              </div>
+              <div class="knob-value">0.30s</div>
+            </div>
+
+            <div class="rotary-knob" data-param="body_tailFreq" data-min="30" data-max="85" data-step="1" data-default="50" data-unit="Hz">
+              <div class="knob-label">INTONAZIONE CODA</div>
+              <div class="knob-sublabel">Nota grave del sub</div>
+              <div class="knob-graphic">
+                <svg class="knob-arc" viewBox="0 0 50 50">
+                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                  <circle class="knob-arc-fill fill-amber" cx="25" cy="25" r="20"></circle>
+                </svg>
+                <div class="knob-dial"><div class="knob-pointer pointer-amber"></div></div>
+              </div>
+              <div class="knob-value">50Hz</div>
             </div>
           </div>
         </div>
