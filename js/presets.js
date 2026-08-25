@@ -2,6 +2,78 @@
  * KickForge 303 - Libreria Preset per Sottogeneri e Gestione Preset Utente
  */
 
+/**
+ * Set completo dei parametri della cassa con valori di default neutri.
+ * Ogni preset viene fuso sopra questa base: garantisce che il motore abbia
+ * sempre tutti i valori, che i knob si resettino correttamente al cambio preset
+ * e che i preset vecchi (senza i nuovi controlli) restino retrocompatibili.
+ */
+export const DEFAULT_KICK_PARAMS = {
+  super_botta: 1.6,
+  extreme_mode: false,
+
+  // Attacco 303
+  attack303_enabled: true,
+  attack303_volume: 0.85,
+  attack303_waveform: "sawtooth",
+  attack303_cutoff: 2800,
+  attack303_resonance: 14.0,
+  attack303_envMod: 0.85,
+  attack303_decay: 0.04,
+  attack303_pitch: 350,
+  attack303_drive: 4.0,
+  click_volume: 0.7,
+  click_tone: 6500,
+
+  // Screech / Laser (piep) — spento di default per retrocompatibilità
+  screech_enabled: false,
+  screech_volume: 0.7,
+  screech_waveform: "sawtooth",
+  screech_pitchStart: 1800,
+  screech_pitchEnd: 220,
+  screech_decay: 0.12,
+  screech_drive: 6.0,
+  screech_cutoff: 2600,
+  screech_resonance: 6.0,
+
+  // Punch / Transient — neutro di default (0 = come prima)
+  punch_amount: 0.0,
+  punch_tone: 3000,
+  punch_decay: 0.006,
+  comp_attack: 3.0,
+  comp_ratio: 8.0,
+
+  // Corpo & Botta
+  body_enabled: true,
+  body_waveform: "sine",
+  body_startFreq: 480,
+  body_punchFreq: 150,
+  body_tailFreq: 50,
+  body_punchDecay: 0.038,
+  body_tailDecay: 0.30,
+  body_volume: 1.0,
+  fm_amount: 90,
+  fm_ratio: 2.0,
+
+  // Sub & Rimbombo
+  rumble_enabled: true,
+  rumble_volume: 0.5,
+  rumble_decay: 0.35,
+  rumble_cutoff: 120,
+  rumble_ducking: 0.8,
+  sub_boost: 4.0,
+
+  // Distorsione & Tono
+  drive_type: "tube",
+  drive_amount: 4.0,
+  fold_amount: 2.5,
+  eq_low: 4.0,
+  eq_midFreq: 600,
+  eq_midGain: 0.0,
+  eq_high: 3.0,
+  master_gain: 1.15
+};
+
 export const PRESET_CATEGORIES = [
   { id: "all", label: "Tutti i Preset" },
   { id: "acid", label: "🧪 303 & Acid" },
@@ -193,6 +265,24 @@ export const PRESETS = [
       click_volume: 0.85,
       click_tone: 7400,
 
+      // Laser tonale galoppante frenchcore
+      screech_enabled: true,
+      screech_volume: 0.7,
+      screech_waveform: "sawtooth",
+      screech_pitchStart: 2200,
+      screech_pitchEnd: 260,
+      screech_decay: 0.13,
+      screech_drive: 6.5,
+      screech_cutoff: 3000,
+      screech_resonance: 7.0,
+
+      // Punch nitido
+      punch_amount: 0.6,
+      punch_tone: 3600,
+      punch_decay: 0.005,
+      comp_attack: 5.0,
+      comp_ratio: 9.0,
+
       body_enabled: true,
       body_waveform: "sine",
       body_startFreq: 700,
@@ -243,6 +333,24 @@ export const PRESETS = [
       attack303_drive: 7.0,
       click_volume: 1.0,
       click_tone: 8800,
+
+      // Screech / Laser acutissimo (il "piep" uptempo)
+      screech_enabled: true,
+      screech_volume: 0.85,
+      screech_waveform: "square",
+      screech_pitchStart: 3200,
+      screech_pitchEnd: 320,
+      screech_decay: 0.16,
+      screech_drive: 8.0,
+      screech_cutoff: 3400,
+      screech_resonance: 9.0,
+
+      // Punch aggressivo che buca
+      punch_amount: 0.7,
+      punch_tone: 4200,
+      punch_decay: 0.006,
+      comp_attack: 6.0,
+      comp_ratio: 10.0,
 
       body_enabled: true,
       body_waveform: "triangle",
@@ -373,6 +481,73 @@ export const PRESETS = [
       eq_high: 0.5,
       master_gain: 1.1
     }
+  },
+  {
+    id: "laser_punch_destroyer",
+    name: "🔫 Laser Punch Destroyer",
+    category: "uptempo",
+    categoryLabel: "Uptempo / Frenchcore",
+    bpm: 210,
+    description: "Cassa con laser tonale discendente e punch estremo: transiente che buca il petto e screech acido in coda.",
+    params: {
+      super_botta: 2.3,
+      extreme_mode: true,
+
+      attack303_enabled: true,
+      attack303_volume: 0.7,
+      attack303_waveform: "square",
+      attack303_cutoff: 4200,
+      attack303_resonance: 15.0,
+      attack303_envMod: 0.92,
+      attack303_decay: 0.03,
+      attack303_pitch: 520,
+      attack303_drive: 6.0,
+      click_volume: 0.9,
+      click_tone: 7800,
+
+      screech_enabled: true,
+      screech_volume: 0.9,
+      screech_waveform: "sawtooth",
+      screech_pitchStart: 2800,
+      screech_pitchEnd: 180,
+      screech_decay: 0.18,
+      screech_drive: 8.5,
+      screech_cutoff: 3200,
+      screech_resonance: 10.0,
+
+      punch_amount: 0.85,
+      punch_tone: 4000,
+      punch_decay: 0.006,
+      comp_attack: 7.0,
+      comp_ratio: 11.0,
+
+      body_enabled: true,
+      body_waveform: "sine",
+      body_startFreq: 760,
+      body_punchFreq: 210,
+      body_tailFreq: 55,
+      body_punchDecay: 0.03,
+      body_tailDecay: 0.2,
+      body_volume: 1.0,
+      fm_amount: 120,
+      fm_ratio: 2.5,
+
+      rumble_enabled: false,
+      rumble_volume: 0.1,
+      rumble_decay: 0.15,
+      rumble_cutoff: 100,
+      rumble_ducking: 0.9,
+      sub_boost: 4.0,
+
+      drive_type: "hard",
+      drive_amount: 7.5,
+      fold_amount: 4.0,
+      eq_low: 4.0,
+      eq_midFreq: 1000,
+      eq_midGain: 4.0,
+      eq_high: 6.0,
+      master_gain: 1.3
+    }
   }
 ];
 
@@ -419,6 +594,31 @@ export class PresetManager {
     } catch (e) {
       console.error("Failed to update custom presets:", e);
     }
+  }
+
+  // Sovrascrive un preset personalizzato esistente (salva le modifiche)
+  updateCustomPreset(id, params, bpm) {
+    const idx = this.customPresets.findIndex(p => p.id === id);
+    if (idx === -1) return null;
+    this.customPresets[idx] = {
+      ...this.customPresets[idx],
+      params: { ...params },
+      bpm: bpm ?? this.customPresets[idx].bpm
+    };
+    try {
+      localStorage.setItem(this.customPresetsKey, JSON.stringify(this.customPresets));
+    } catch (e) {
+      console.error("Failed to update custom preset:", e);
+    }
+    return this.customPresets[idx];
+  }
+
+  // Importa un preset da oggetto JSON esterno, salvandolo come personalizzato
+  importPreset(obj) {
+    const name = (obj && obj.name) ? String(obj.name).replace(/^💾\s*/, "") : "Preset Importato";
+    const bpm = (obj && obj.bpm) ? obj.bpm : 140;
+    const params = (obj && obj.params) ? obj.params : {};
+    return this.saveCustomPreset(name, "Importati", params, bpm);
   }
 
   getAllPresets() {

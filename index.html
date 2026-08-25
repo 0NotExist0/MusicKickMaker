@@ -30,6 +30,19 @@
         <button id="open-save-preset-btn" class="btn btn-secondary" title="Salva le tue impostazioni come nuovo preset">
           <span class="btn-icon">💾</span> Salva Suono
         </button>
+        <button id="update-current-preset-btn" class="btn btn-secondary" style="display: none;" title="Sovrascrivi il preset personalizzato corrente con le modifiche attuali">
+          <span class="btn-icon">✏️</span> Salva Modifiche
+        </button>
+        <button id="duplicate-preset-btn" class="btn btn-secondary" title="Crea una copia modificabile del preset corrente (anche di fabbrica)">
+          <span class="btn-icon">⧉</span> Duplica
+        </button>
+        <button id="export-preset-btn" class="btn btn-secondary" title="Esporta il preset corrente come file .json">
+          <span class="btn-icon">📤</span> Esporta JSON
+        </button>
+        <label class="btn btn-secondary" title="Importa un preset da file .json" style="cursor:pointer;">
+          <span class="btn-icon">📥</span> Importa JSON
+          <input type="file" id="import-preset-input" accept="application/json,.json" style="display:none;">
+        </label>
         <button id="delete-current-preset-btn" class="btn btn-danger-mini" style="display: none;" title="Elimina questo preset personalizzato">
           🗑️ Elimina
         </button>
@@ -55,6 +68,35 @@
         </div>
         <div id="quick-presets-grid" class="quick-presets-grid"></div>
       </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- GENERATORE CASSA CON AI                        -->
+    <!-- ============================================== -->
+    <section class="ai-generator-card">
+      <div class="ai-gen-header">
+        <span class="ai-badge">🤖 AI</span>
+        <div class="ai-gen-title-wrap">
+          <h2 class="ai-gen-title">Genera una cassa dal testo</h2>
+          <p class="ai-gen-sub">Descrivi il suono che vuoi: l'AI imposta tutti i parametri per te. Poi rifinisci a mano e salvalo.</p>
+        </div>
+      </div>
+      <div class="ai-gen-body">
+        <input type="text" id="ai-prompt-input" class="ai-prompt-input"
+               placeholder="es. cassa uptempo con laser discendente e punch estremo a 200 BPM"
+               maxlength="600" autocomplete="off">
+        <button id="ai-generate-btn" class="btn btn-primary btn-glow ai-gen-btn">
+          <span class="btn-icon">✨</span> <span class="ai-btn-label">Genera Cassa</span>
+        </button>
+      </div>
+      <div class="ai-gen-examples">
+        <span class="ai-ex-label">Prova:</span>
+        <button class="ai-example-chip" data-prompt="cassa uptempo con laser discendente acutissimo e punch estremo a 200 BPM">🔫 Uptempo laser</button>
+        <button class="ai-example-chip" data-prompt="cassa gabber Rotterdam anni 90 calda e distorta a 170 BPM">💀 Gabber '90</button>
+        <button class="ai-example-chip" data-prompt="kick techno industriale cupa e profonda con rimbombo warehouse a 135 BPM">🏭 Industrial deep</button>
+        <button class="ai-example-chip" data-prompt="cassa frenchcore galoppante rimbalzante con laser tonale a 205 BPM">🚀 Frenchcore</button>
+      </div>
+      <p id="ai-gen-status" class="ai-gen-status" style="display:none;"></p>
     </section>
 
     <!-- ============================================== -->
@@ -964,6 +1006,216 @@
                 <div class="knob-dial"><div class="knob-pointer pointer-red"></div></div>
               </div>
               <div class="knob-value">1.15x</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- MODULO 5: SCREECH / LASER (PIEP UPTEMPO) -->
+      <article class="synth-module module-303-attack">
+        <div class="module-header header-303">
+          <div class="module-title-wrap">
+            <span class="acid-badge">LASER</span>
+            <h2 class="module-title">🔫 SCREECH / LASER (PIEP)</h2>
+          </div>
+          <label class="switch" title="Accendi/Spegni il layer Screech/Laser">
+            <input type="checkbox" id="toggle-screech">
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <p class="module-description-hint">
+          💡 Il tipico "piep/laser" di Uptempo e Frenchcore: uno sweep di pitch tonale e distorto. Imposta pitch iniziale più alto del finale per il classico laser discendente, o invertili per un "piep" ascendente.
+        </p>
+
+        <div class="module-body">
+          <div class="control-row-compact">
+            <span class="row-label">ONDA LASER:</span>
+            <div class="radio-pill-group">
+              <label class="radio-pill">
+                <input type="radio" name="screech_waveform" value="sawtooth" checked>
+                <span>DENTE DI SEGA (Screech)</span>
+              </label>
+              <label class="radio-pill">
+                <input type="radio" name="screech_waveform" value="square">
+                <span>QUADRA (Piep)</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="knobs-grid">
+            <div class="rotary-knob" data-param="screech_pitchStart" data-min="80" data-max="5000" data-step="20" data-default="1800" data-unit="Hz">
+              <div class="knob-label">PITCH INIZIALE</div>
+              <div class="knob-sublabel">Partenza sweep</div>
+              <div class="knob-graphic">
+                <svg class="knob-arc" viewBox="0 0 50 50">
+                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                  <circle class="knob-arc-fill fill-303" cx="25" cy="25" r="20"></circle>
+                </svg>
+                <div class="knob-dial"><div class="knob-pointer pointer-303"></div></div>
+              </div>
+              <div class="knob-value">1800Hz</div>
+            </div>
+
+            <div class="rotary-knob" data-param="screech_pitchEnd" data-min="40" data-max="5000" data-step="20" data-default="220" data-unit="Hz">
+              <div class="knob-label">PITCH FINALE</div>
+              <div class="knob-sublabel">Arrivo sweep (su/giù)</div>
+              <div class="knob-graphic">
+                <svg class="knob-arc" viewBox="0 0 50 50">
+                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                  <circle class="knob-arc-fill fill-303" cx="25" cy="25" r="20"></circle>
+                </svg>
+                <div class="knob-dial"><div class="knob-pointer pointer-303"></div></div>
+              </div>
+              <div class="knob-value">220Hz</div>
+            </div>
+
+            <div class="rotary-knob" data-param="screech_decay" data-min="0.02" data-max="0.5" data-step="0.01" data-default="0.12" data-unit="s">
+              <div class="knob-label">DURATA LASER</div>
+              <div class="knob-sublabel">Quanto suona</div>
+              <div class="knob-graphic">
+                <svg class="knob-arc" viewBox="0 0 50 50">
+                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                  <circle class="knob-arc-fill fill-303" cx="25" cy="25" r="20"></circle>
+                </svg>
+                <div class="knob-dial"><div class="knob-pointer pointer-303"></div></div>
+              </div>
+              <div class="knob-value">0.12s</div>
+            </div>
+
+            <div class="rotary-knob" data-param="screech_cutoff" data-min="200" data-max="9000" data-step="50" data-default="2600" data-unit="Hz">
+              <div class="knob-label">TIMBRO LASER</div>
+              <div class="knob-sublabel">Centro bandpass</div>
+              <div class="knob-graphic">
+                <svg class="knob-arc" viewBox="0 0 50 50">
+                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                  <circle class="knob-arc-fill fill-303" cx="25" cy="25" r="20"></circle>
+                </svg>
+                <div class="knob-dial"><div class="knob-pointer pointer-303"></div></div>
+              </div>
+              <div class="knob-value">2600Hz</div>
+            </div>
+
+            <div class="rotary-knob" data-param="screech_resonance" data-min="0.5" data-max="24" data-step="0.5" data-default="6" data-unit="Q">
+              <div class="knob-label">ACIDITÀ LASER</div>
+              <div class="knob-sublabel">Risonanza screech</div>
+              <div class="knob-graphic">
+                <svg class="knob-arc" viewBox="0 0 50 50">
+                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                  <circle class="knob-arc-fill fill-303" cx="25" cy="25" r="20"></circle>
+                </svg>
+                <div class="knob-dial"><div class="knob-pointer pointer-303"></div></div>
+              </div>
+              <div class="knob-value">6.0Q</div>
+            </div>
+
+            <div class="rotary-knob" data-param="screech_drive" data-min="1" data-max="12" data-step="0.2" data-default="6" data-unit="x">
+              <div class="knob-label">DISTORSIONE LASER</div>
+              <div class="knob-sublabel">Cattiveria</div>
+              <div class="knob-graphic">
+                <svg class="knob-arc" viewBox="0 0 50 50">
+                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                  <circle class="knob-arc-fill fill-303" cx="25" cy="25" r="20"></circle>
+                </svg>
+                <div class="knob-dial"><div class="knob-pointer pointer-303"></div></div>
+              </div>
+              <div class="knob-value">6.0x</div>
+            </div>
+
+            <div class="rotary-knob" data-param="screech_volume" data-min="0" data-max="1" data-step="0.02" data-default="0.7" data-unit="">
+              <div class="knob-label">VOLUME LASER</div>
+              <div class="knob-sublabel">Mix screech</div>
+              <div class="knob-graphic">
+                <svg class="knob-arc" viewBox="0 0 50 50">
+                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                  <circle class="knob-arc-fill fill-303" cx="25" cy="25" r="20"></circle>
+                </svg>
+                <div class="knob-dial"><div class="knob-pointer pointer-303"></div></div>
+              </div>
+              <div class="knob-value">0.70</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- MODULO 6: PUNCH & TRANSIENT DESIGNER -->
+      <article class="synth-module module-body">
+        <div class="module-header header-body">
+          <div class="module-title-wrap">
+            <span class="body-badge">PUNCH</span>
+            <h2 class="module-title">🥊 PUNCH & TRANSIENT DESIGNER</h2>
+          </div>
+        </div>
+
+        <p class="module-description-hint">
+          💡 Aggiunge lo "schiaffo" fisico iniziale. Il beater dà il click di attacco; la Trasparenza Punch regola quanto transiente lasciare passare prima della compressione (più alto = più botta secca).
+        </p>
+
+        <div class="module-body">
+          <div class="knobs-grid">
+            <div class="rotary-knob" data-param="punch_amount" data-min="0" data-max="1" data-step="0.02" data-default="0" data-unit="">
+              <div class="knob-label">QUANTITÀ PUNCH</div>
+              <div class="knob-sublabel">Forza del beater</div>
+              <div class="knob-graphic">
+                <svg class="knob-arc" viewBox="0 0 50 50">
+                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                  <circle class="knob-arc-fill fill-amber" cx="25" cy="25" r="20"></circle>
+                </svg>
+                <div class="knob-dial"><div class="knob-pointer pointer-amber"></div></div>
+              </div>
+              <div class="knob-value">0.00</div>
+            </div>
+
+            <div class="rotary-knob" data-param="punch_tone" data-min="500" data-max="8000" data-step="50" data-default="3000" data-unit="Hz">
+              <div class="knob-label">TONO BEATER</div>
+              <div class="knob-sublabel">Colore del click</div>
+              <div class="knob-graphic">
+                <svg class="knob-arc" viewBox="0 0 50 50">
+                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                  <circle class="knob-arc-fill fill-amber" cx="25" cy="25" r="20"></circle>
+                </svg>
+                <div class="knob-dial"><div class="knob-pointer pointer-amber"></div></div>
+              </div>
+              <div class="knob-value">3000Hz</div>
+            </div>
+
+            <div class="rotary-knob" data-param="punch_decay" data-min="0.002" data-max="0.03" data-step="0.001" data-default="0.006" data-unit="s">
+              <div class="knob-label">DURATA BEATER</div>
+              <div class="knob-sublabel">Lunghezza click</div>
+              <div class="knob-graphic">
+                <svg class="knob-arc" viewBox="0 0 50 50">
+                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                  <circle class="knob-arc-fill fill-amber" cx="25" cy="25" r="20"></circle>
+                </svg>
+                <div class="knob-dial"><div class="knob-pointer pointer-amber"></div></div>
+              </div>
+              <div class="knob-value">0.006s</div>
+            </div>
+
+            <div class="rotary-knob" data-param="comp_attack" data-min="0.1" data-max="20" data-step="0.1" data-default="3" data-unit="ms">
+              <div class="knob-label">TRASPARENZA PUNCH</div>
+              <div class="knob-sublabel">Attacco compressore</div>
+              <div class="knob-graphic">
+                <svg class="knob-arc" viewBox="0 0 50 50">
+                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                  <circle class="knob-arc-fill fill-amber" cx="25" cy="25" r="20"></circle>
+                </svg>
+                <div class="knob-dial"><div class="knob-pointer pointer-amber"></div></div>
+              </div>
+              <div class="knob-value">3.0ms</div>
+            </div>
+
+            <div class="rotary-knob" data-param="comp_ratio" data-min="1" data-max="20" data-step="0.5" data-default="8" data-unit=":1">
+              <div class="knob-label">COMPRESSIONE</div>
+              <div class="knob-sublabel">Rapporto punch</div>
+              <div class="knob-graphic">
+                <svg class="knob-arc" viewBox="0 0 50 50">
+                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                  <circle class="knob-arc-fill fill-amber" cx="25" cy="25" r="20"></circle>
+                </svg>
+                <div class="knob-dial"><div class="knob-pointer pointer-amber"></div></div>
+              </div>
+              <div class="knob-value">8.0:1</div>
             </div>
           </div>
         </div>

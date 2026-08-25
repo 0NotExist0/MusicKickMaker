@@ -23,6 +23,98 @@ export const CONTROL_TOOLTIPS = {
   },
 
   // ==========================================
+  // MODULO 5: SCREECH / LASER (PIEP)
+  // ==========================================
+  screech_pitchStart: {
+    title: "🔫 PITCH INIZIALE LASER",
+    what: "Frequenza da cui parte lo sweep del laser/piep.",
+    ifHigh: "Il laser parte acutissimo, tipo sirena o zap elettronico.",
+    ifLow: "Parte più grave e corposo, meno stridulo.",
+    tip: "💡 Per il classico laser discendente tienilo più ALTO del Pitch Finale (es. 2500Hz → 200Hz)."
+  },
+  screech_pitchEnd: {
+    title: "🔫 PITCH FINALE LASER",
+    what: "Frequenza su cui arriva lo sweep. Decide la direzione del laser.",
+    ifHigh: "Se più alto del pitch iniziale ottieni un 'piep' ascendente (in salita).",
+    ifLow: "Se più basso del pitch iniziale ottieni il classico laser discendente uptempo.",
+    tip: "💡 Invertendo iniziale/finale cambi completamente il carattere: zap in giù o piep in su."
+  },
+  screech_decay: {
+    title: "⏱️ DURATA LASER",
+    what: "Per quanto tempo resta udibile lo screech dopo il colpo.",
+    ifHigh: "Il laser suona più a lungo, diventa una coda tonale evidente e cantante.",
+    ifLow: "Diventa un click/zap brevissimo, quasi solo transiente.",
+    tip: "💡 0.10-0.20s per un laser ben udibile; sotto 0.05s per un semplice tic acido."
+  },
+  screech_cutoff: {
+    title: "🎚️ TIMBRO LASER (Bandpass)",
+    what: "Centro del filtro passa-banda che dà il carattere 'screechy' al laser.",
+    ifHigh: "Timbro più sottile, sibilante e tagliente.",
+    ifLow: "Timbro più pieno e ronzante.",
+    tip: "💡 Alzalo verso 3000-4000Hz per far bucare il laser sopra la cassa."
+  },
+  screech_resonance: {
+    title: "🌀 ACIDITÀ LASER (Q)",
+    what: "Risonanza del filtro del laser: enfatizza una banda stretta rendendolo più squelchy.",
+    ifHigh: "Laser più risonante, acido e fischiante.",
+    ifLow: "Laser più neutro e largo di banda.",
+    tip: "💡 Sopra 8Q per un carattere marcatamente acido/303."
+  },
+  screech_drive: {
+    title: "🔥 DISTORSIONE LASER",
+    what: "Quantità di saturazione hard-clip applicata al laser.",
+    ifHigh: "Laser sporco, ricco di armonici, molto aggressivo (uptempo/frenchcore).",
+    ifLow: "Laser più pulito e tonale.",
+    tip: "💡 6-9x per il tipico screech distorto che urla nel mix."
+  },
+  screech_volume: {
+    title: "🔊 VOLUME LASER",
+    what: "Livello del layer laser nel mix della cassa.",
+    ifHigh: "Il laser domina, in primo piano.",
+    ifLow: "Il laser resta un dettaglio in sottofondo.",
+    tip: "💡 0.6-0.9 se vuoi che il laser sia la firma del suono."
+  },
+
+  // ==========================================
+  // MODULO 6: PUNCH & TRANSIENT DESIGNER
+  // ==========================================
+  punch_amount: {
+    title: "🥊 QUANTITÀ PUNCH",
+    what: "Forza del 'beater', un click tonale d'attacco dedicato che aggiunge lo schiaffo fisico iniziale.",
+    ifHigh: "Cassa molto più punchy e in faccia, con attacco netto e percussivo.",
+    ifLow: "Attacco più morbido, senza click aggiuntivo (a 0 è disattivato).",
+    tip: "💡 0.5-0.85 per un punch deciso da uptempo/hardcore."
+  },
+  punch_tone: {
+    title: "🎯 TONO BEATER",
+    what: "Frequenza del click d'attacco del punch.",
+    ifHigh: "Attacco più acuto, 'ticky', tipo battente duro.",
+    ifLow: "Attacco più cupo e legnoso.",
+    tip: "💡 3000-4500Hz per un click che buca; più basso per un thump morbido."
+  },
+  punch_decay: {
+    title: "⏱️ DURATA BEATER",
+    what: "Quanto dura il click d'attacco del punch.",
+    ifHigh: "Attacco più lungo e presente, quasi un piccolo tono.",
+    ifLow: "Click ultra-secco e istantaneo.",
+    tip: "💡 Tienilo corto (0.004-0.008s) per mantenere il punch pulito."
+  },
+  comp_attack: {
+    title: "🛡️ TRASPARENZA PUNCH (Attacco Comp.)",
+    what: "Tempo d'attacco del compressore. Regola quanto transiente passa PRIMA che la compressione intervenga.",
+    ifHigh: "Lascia passare più transiente: la cassa diventa più punchy e schioccante.",
+    ifLow: "La compressione afferra subito: suono più incollato e schiacciato, meno punch.",
+    tip: "💡 Alzalo verso 6-10ms se senti la cassa 'smorzata' e vuoi più botta secca."
+  },
+  comp_ratio: {
+    title: "🗜️ COMPRESSIONE (Ratio)",
+    what: "Rapporto di compressione applicato alla cassa.",
+    ifHigh: "Suono più denso, controllato e aggressivo.",
+    ifLow: "Dinamica più aperta e naturale.",
+    tip: "💡 8-12:1 per casse hardcore compatte; sotto 4:1 per techno più dinamica."
+  },
+
+  // ==========================================
   // MODULO 1: ATTACCO 303 & FISCHIO ACIDO (CASSA)
   // ==========================================
   attack303_cutoff: {

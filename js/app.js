@@ -3,7 +3,7 @@
  */
 
 import { KickSynthEngine } from "./audio-engine.js";
-import { PresetManager, PRESETS, PRESET_CATEGORIES } from "./presets.js";
+import { PresetManager, PRESETS, PRESET_CATEGORIES, DEFAULT_KICK_PARAMS } from "./presets.js";
 import { BassPresetManager, BASS_PRESETS, BASS_PRESET_CATEGORIES } from "./bass-presets.js";
 import { Visualizer } from "./visualizer.js";
 import { StepSequencer } from "./sequencer.js";
@@ -25,7 +25,7 @@ class KickForgeApp {
     this.currentKickCategory = "all";
     this.currentBassCategory = "all";
 
-    this.currentKickParams = { ...PRESETS[0].params };
+    this.currentKickParams = { ...DEFAULT_KICK_PARAMS, ...PRESETS[0].params };
     this.currentBassParams = { ...BASS_PRESETS[0].params };
 
     this.currentBpm = PRESETS[0].bpm || 175;
@@ -158,7 +158,7 @@ class KickForgeApp {
     if (!preset) return;
 
     this.currentKickPresetId = preset.id;
-    this.currentKickParams = { ...preset.params };
+    this.currentKickParams = { ...DEFAULT_KICK_PARAMS, ...preset.params };
     this.currentBpm = preset.bpm || 140;
 
     this.sequencer.setBpm(this.currentBpm);
@@ -193,6 +193,10 @@ class KickForgeApp {
     if (deleteBtn) {
       deleteBtn.style.display = preset.isCustom ? "inline-flex" : "none";
     }
+    const updateBtn = document.getElementById("update-current-preset-btn");
+    if (updateBtn) {
+      updateBtn.style.display = preset.isCustom ? "inline-flex" : "none";
+    }
 
     document.querySelectorAll(".quick-presets-grid .quick-preset-btn").forEach(btn => {
       const isMatch = btn.querySelector(".p-name")?.textContent === preset.name;
@@ -223,6 +227,12 @@ class KickForgeApp {
     const driveType = document.querySelector(`input[name="drive_type"][value="${this.currentKickParams.drive_type}"]`);
     if (driveType) driveType.checked = true;
 
+    const waveScreech = document.querySelector(`input[name="screech_waveform"][value="${this.currentKickParams.screech_waveform}"]`);
+    if (waveScreech) waveScreech.checked = true;
+
+    const toggleScreech = document.getElementById("toggle-screech");
+    if (toggleScreech) toggleScreech.checked = !!this.currentKickParams.screech_enabled;
+
     const toggle303 = document.getElementById("toggle-attack303");
     if (toggle303) toggle303.checked = !!this.currentKickParams.attack303_enabled;
 
@@ -231,6 +241,86 @@ class KickForgeApp {
 
     const toggleRumble = document.getElementById("toggle-rumble");
     if (toggleRumble) toggleRumble.checked = !!this.currentKickParams.rumble_enabled;
+  }
+
+  // ==========================================
+  // GENERATORE CASSA CON AI
+  // ==========================================
+  applyKickParams(params, bpm, description = "") {
+    this.currentKickParams = { ...DEFAULT_KICK_PARAMS, ...params };
+    if (bpm) {
+      this.currentBpm = bpm;
+      this.sequencer.setBpm(bpm);
+      const bpmInput = document.getElementById("bpm-input");
+      const bpmSlider = document.getElementById("bpm-slider");
+      if (bpmInput) bpmInput.value = bpm;
+      if (bpmSlider) bpmSlider.value = bpm;
+    }
+
+    const bottaSlider = document.getElementById("super-botta-slider");
+    const extremeToggle = document.getElementById("toggle-extreme-mode");
+    if (bottaSlider) {
+      bottaSlider.value = this.currentKickParams.super_botta || 1.6;
+      this.updateSuperBottaText(this.currentKickParams.super_botta || 1.6);
+    }
+    if (extremeToggle) extremeToggle.checked = !!this.currentKickParams.extreme_mode;
+
+    Object.keys(this.currentKickParams).forEach(param => {
+      this.uiManager.setKnobValue(param, this.currentKickParams[param]);
+    });
+    this.updateKickControlsFromParams();
+
+    if (description) {
+      const descEl = document.getElementById("preset-description");
+      if (descEl) descEl.textContent = description;
+    }
+  }
+
+  async generateWithAI(prompt) {
+    const btn = document.getElementById("ai-generate-btn");
+    const label = btn?.querySelector(".ai-btn-label");
+    const status = document.getElementById("ai-gen-status");
+    const setStatus = (msg, type) => {
+      if (!status) return;
+      status.textContent = msg;
+      status.className = `ai-gen-status ${type ? "status-" + type : ""}`;
+      status.style.display = msg ? "block" : "none";
+    };
+
+    if (btn) btn.disabled = true;
+    if (label) label.textContent = "Genero…";
+    setStatus("🎛️ L'AI sta progettando la cassa…", "info");
+
+    try {
+      const res = await fetch("/api/generate-preset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
+      });
+
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        // Tipico in locale (server statico) dove /api non esiste
+        throw new Error("La funzione AI non è raggiungibile qui. Funziona dopo il deploy su Vercel (o con `vercel dev`) con la chiave AI configurata.");
+      }
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.hint ? `${data.error} ${data.hint}` : (data.error || "Errore di generazione."));
+      }
+
+      this.applyKickParams(data.params, data.bpm, `🤖 ${data.name} — generata dall'AI (${data.model || "modello"}).`);
+      this.triggerKick();
+      setStatus(`✅ "${data.name}" generata! Rifinisci a mano e premi 💾 Salva Suono per tenerla.`, "success");
+      this.uiManager.showToast(`Cassa AI generata: ${data.name}`, "success");
+    } catch (err) {
+      console.error("AI generate error:", err);
+      setStatus(`⚠️ ${err.message}`, "error");
+      this.uiManager.showToast("Generazione AI non riuscita.", "error");
+    } finally {
+      if (btn) btn.disabled = false;
+      if (label) label.textContent = "Genera Cassa";
+    }
   }
 
   // ==========================================
@@ -561,6 +651,13 @@ class KickForgeApp {
       });
     });
 
+    document.querySelectorAll('input[name="screech_waveform"]').forEach(input => {
+      input.addEventListener("change", (e) => {
+        this.currentKickParams.screech_waveform = e.target.value;
+        this.debounceKickTrigger();
+      });
+    });
+
     // Moduli switch Cassa
     const toggle303 = document.getElementById("toggle-attack303");
     if (toggle303) {
@@ -582,6 +679,14 @@ class KickForgeApp {
     if (toggleRumble) {
       toggleRumble.addEventListener("change", (e) => {
         this.currentKickParams.rumble_enabled = e.target.checked;
+        this.debounceKickTrigger();
+      });
+    }
+
+    const toggleScreech = document.getElementById("toggle-screech");
+    if (toggleScreech) {
+      toggleScreech.addEventListener("change", (e) => {
+        this.currentKickParams.screech_enabled = e.target.checked;
         this.debounceKickTrigger();
       });
     }
@@ -680,6 +785,100 @@ class KickForgeApp {
       });
     }
 
+    // Elimina preset personalizzato corrente
+    const deleteBtn = document.getElementById("delete-current-preset-btn");
+    if (deleteBtn) {
+      deleteBtn.addEventListener("click", () => {
+        const preset = this.presetManager.getPresetById(this.currentKickPresetId);
+        if (!preset || !preset.isCustom) return;
+        if (!confirm(`Eliminare il preset "${preset.name}"? L'operazione non è reversibile.`)) return;
+        this.presetManager.deleteCustomPreset(preset.id);
+        this.renderKickCategoryTabs();
+        this.renderKickPresets();
+        this.loadKickPreset(PRESETS[0].id);
+        this.uiManager.showToast("Preset eliminato.", "info");
+      });
+    }
+
+    // Sovrascrivi (salva modifiche) sul preset personalizzato corrente
+    const updateBtn = document.getElementById("update-current-preset-btn");
+    if (updateBtn) {
+      updateBtn.addEventListener("click", () => {
+        const preset = this.presetManager.getPresetById(this.currentKickPresetId);
+        if (!preset || !preset.isCustom) return;
+        this.presetManager.updateCustomPreset(preset.id, this.currentKickParams, this.currentBpm);
+        this.renderKickPresets();
+        this.uiManager.showToast(`✅ Modifiche salvate su "${preset.name}"`, "success");
+      });
+    }
+
+    // Duplica il preset corrente (anche di fabbrica) come nuovo personalizzato modificabile
+    const duplicateBtn = document.getElementById("duplicate-preset-btn");
+    if (duplicateBtn) {
+      duplicateBtn.addEventListener("click", () => {
+        const preset = this.presetManager.getPresetById(this.currentKickPresetId);
+        const baseName = (preset?.name || "Cassa").replace(/^💾\s*/, "").replace(/^[^\w]+\s*/, "");
+        const newPreset = this.presetManager.saveCustomPreset(`${baseName} (copia)`, "I Miei Preset", this.currentKickParams, this.currentBpm);
+        this.currentKickCategory = "all";
+        this.renderKickCategoryTabs();
+        this.renderKickPresets();
+        this.loadKickPreset(newPreset.id);
+        this.uiManager.showToast("Copia modificabile creata!", "success");
+      });
+    }
+
+    // Esporta preset corrente come file .json
+    const exportPresetBtn = document.getElementById("export-preset-btn");
+    if (exportPresetBtn) {
+      exportPresetBtn.addEventListener("click", () => {
+        const preset = this.presetManager.getPresetById(this.currentKickPresetId);
+        const data = {
+          name: (preset?.name || "Cassa").replace(/^💾\s*/, ""),
+          bpm: this.currentBpm,
+          params: this.currentKickParams,
+          _app: "KickForge303",
+          _type: "kick_preset"
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${data.name.replace(/[^\w\-]+/g, "_")}.kickforge.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        this.uiManager.showToast("Preset esportato in .json", "success");
+      });
+    }
+
+    // Importa preset da file .json
+    const importPresetInput = document.getElementById("import-preset-input");
+    if (importPresetInput) {
+      importPresetInput.addEventListener("change", (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          try {
+            const obj = JSON.parse(ev.target.result);
+            if (!obj || !obj.params) throw new Error("File non valido");
+            const newPreset = this.presetManager.importPreset(obj);
+            this.currentKickCategory = "all";
+            this.renderKickCategoryTabs();
+            this.renderKickPresets();
+            this.loadKickPreset(newPreset.id);
+            this.uiManager.showToast(`Preset "${newPreset.name}" importato!`, "success");
+          } catch (err) {
+            console.error("Import error:", err);
+            this.uiManager.showToast("File preset non valido.", "error");
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = "";
+      });
+    }
+
     // Salva Basso Modal
     const saveBassBtn = document.getElementById("open-save-bass-btn");
     const saveBassModal = document.getElementById("save-bass-modal");
@@ -704,6 +903,31 @@ class KickForgeApp {
         this.uiManager.showToast(`Basso "${name}" salvato!`, "success");
       });
     }
+
+    // 9. Generatore AI
+    const aiBtn = document.getElementById("ai-generate-btn");
+    const aiInput = document.getElementById("ai-prompt-input");
+    const runAI = () => {
+      const prompt = (aiInput?.value || "").trim();
+      if (!prompt) {
+        this.uiManager.showToast("Scrivi prima cosa vuoi generare.", "info");
+        aiInput?.focus();
+        return;
+      }
+      this.generateWithAI(prompt);
+    };
+    if (aiBtn) aiBtn.addEventListener("click", runAI);
+    if (aiInput) {
+      aiInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); runAI(); }
+      });
+    }
+    document.querySelectorAll(".ai-example-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        if (aiInput) aiInput.value = chip.dataset.prompt || "";
+        runAI();
+      });
+    });
 
     // Hotkeys
     window.addEventListener("keydown", (e) => {

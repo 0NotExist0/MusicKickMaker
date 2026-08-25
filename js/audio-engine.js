@@ -187,6 +187,75 @@ export class KickSynthEngine {
     }
 
     // ==========================================
+    // LAYER 1.5: SCREECH / LASER (Piep Uptempo & Frenchcore)
+    // Oscillatore distorto con sweep di pitch tonale e controllabile
+    // (su o giù), filtro risonante per il carattere "laser/screech".
+    // ==========================================
+    if (params.screech_enabled) {
+      const scrGain = targetCtx.createGain();
+      const scrVol = (params.screech_volume ?? 0.7) * (1 + (superBotta - 1) * 0.3);
+      const scrDecay = Math.max(0.02, params.screech_decay ?? 0.12);
+
+      scrGain.gain.setValueAtTime(0, now);
+      scrGain.gain.linearRampToValueAtTime(scrVol, now + 0.0015);
+      scrGain.gain.exponentialRampToValueAtTime(0.0001, now + scrDecay);
+
+      const scrOsc = targetCtx.createOscillator();
+      const scrWave = params.screech_waveform || "sawtooth";
+      scrOsc.type = scrWave === "pulse" ? "square" : scrWave;
+
+      const pStart = Math.max(20, params.screech_pitchStart ?? 1800);
+      const pEnd = Math.max(20, params.screech_pitchEnd ?? 220);
+      scrOsc.frequency.setValueAtTime(pStart, now);
+      scrOsc.frequency.exponentialRampToValueAtTime(pEnd, now + scrDecay * 0.9);
+
+      const scrFilter = targetCtx.createBiquadFilter();
+      scrFilter.type = "bandpass";
+      scrFilter.frequency.setValueAtTime(Math.min(18000, Math.max(100, params.screech_cutoff ?? 2600)), now);
+      scrFilter.Q.setValueAtTime(Math.min(24, Math.max(0.5, params.screech_resonance ?? 6)), now);
+
+      const scrDrive = targetCtx.createWaveShaper();
+      const scrDriveAmt = Math.max(1, (params.screech_drive ?? 6) * (1 + (superBotta - 1) * 0.3));
+      scrDrive.curve = this.getDistortionCurve(scrDriveAmt, "hard");
+      scrDrive.oversample = "4x";
+
+      scrOsc.connect(scrDrive);
+      scrDrive.connect(scrFilter);
+      scrFilter.connect(scrGain);
+      scrGain.connect(layerBus);
+
+      scrOsc.start(now);
+      scrOsc.stop(now + scrDecay + 0.05);
+    }
+
+    // ==========================================
+    // LAYER 1.6: PUNCH BEATER (Transiente d'attacco dedicato)
+    // Click tonale brevissimo con sweep verso il grave: aggiunge
+    // lo "schiaffo" fisico iniziale senza toccare corpo e coda.
+    // ==========================================
+    const punchAmt = params.punch_amount ?? 0.0;
+    if (punchAmt > 0.01) {
+      const pOsc = targetCtx.createOscillator();
+      const pGain = targetCtx.createGain();
+      const pTone = Math.max(200, params.punch_tone ?? 3000);
+      const pDecay = Math.max(0.002, params.punch_decay ?? 0.006);
+
+      pOsc.type = "triangle";
+      pOsc.frequency.setValueAtTime(pTone, now);
+      pOsc.frequency.exponentialRampToValueAtTime(Math.max(40, pTone * 0.05), now + pDecay);
+
+      const pVol = punchAmt * 1.15 * (1 + (superBotta - 1) * 0.4);
+      pGain.gain.setValueAtTime(pVol, now);
+      pGain.gain.exponentialRampToValueAtTime(0.0001, now + pDecay);
+
+      pOsc.connect(pGain);
+      pGain.connect(layerBus);
+
+      pOsc.start(now);
+      pOsc.stop(now + pDecay + 0.02);
+    }
+
+    // ==========================================
     // LAYER 2: CORPO & BOTTA PRINCIPALE (Sweep Pitch)
     // ==========================================
     if (params.body_enabled) {
@@ -324,8 +393,11 @@ export class KickSynthEngine {
     const punchComp = targetCtx.createDynamicsCompressor();
     punchComp.threshold.setValueAtTime(-14 - (superBotta - 1) * 6, now);
     punchComp.knee.setValueAtTime(6, now);
-    punchComp.ratio.setValueAtTime(8 + (superBotta - 1) * 4, now);
-    punchComp.attack.setValueAtTime(0.003, now);
+    const compRatio = Math.max(1, (params.comp_ratio ?? 8) + (superBotta - 1) * 4);
+    punchComp.ratio.setValueAtTime(compRatio, now);
+    // comp_attack in millisecondi: più alto = lascia passare più transiente (più punch)
+    const compAttack = Math.min(0.05, Math.max(0.0001, (params.comp_attack ?? 3) / 1000));
+    punchComp.attack.setValueAtTime(compAttack, now);
     punchComp.release.setValueAtTime(0.06, now);
 
     const masterClipper = targetCtx.createWaveShaper();
