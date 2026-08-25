@@ -100,6 +100,41 @@
     </section>
 
     <!-- ============================================== -->
+    <!-- MIXER CASSA/BASSO & VARIAZIONI                 -->
+    <!-- ============================================== -->
+    <section class="mixer-var-card">
+      <div class="mixer-block">
+        <div class="mixer-head">
+          <span class="mixer-tag">🎚️ MIXER</span>
+          <span class="mixer-hint">Bilancia il volume di cassa e basso tra loro</span>
+        </div>
+        <div class="mixer-rows">
+          <div class="mixer-row">
+            <label for="mix-kick-slider" class="mixer-label">CASSA</label>
+            <input type="range" id="mix-kick-slider" class="mixer-slider mixer-slider-kick" min="0" max="1.5" step="0.01" value="1">
+            <span id="mix-kick-val" class="mixer-val">100%</span>
+          </div>
+          <div class="mixer-row">
+            <label for="mix-bass-slider" class="mixer-label">BASSO</label>
+            <input type="range" id="mix-bass-slider" class="mixer-slider mixer-slider-bass" min="0" max="1.5" step="0.01" value="1">
+            <span id="mix-bass-val" class="mixer-val">100%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="var-block">
+        <div class="mixer-head">
+          <span class="var-tag">🎲 VARIAZIONI</span>
+          <span class="mixer-hint">Crea una variazione del suono attuale. Non ti piace? Ricarica il preset.</span>
+        </div>
+        <div class="var-buttons">
+          <button id="variate-kick-btn" class="btn btn-secondary var-btn">🎲 Varia Cassa</button>
+          <button id="variate-bass-btn" class="btn btn-secondary var-btn">🎲 Varia Basso</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
     <!-- GUIDA RAPIDA E CONTROLLO "SUPER BOTTA"         -->
     <!-- ============================================== -->
     <section class="super-botta-banner">
@@ -440,6 +475,19 @@
               <div class="knob-dial"><div class="knob-pointer pointer-amber"></div></div>
             </div>
             <div class="knob-value">8ct</div>
+          </div>
+
+          <div class="rotary-knob" data-param="bass_osc2_mix" data-min="0" data-max="1" data-step="0.02" data-default="0.5" data-unit="">
+            <div class="knob-label">MIX OSC 2</div>
+            <div class="knob-sublabel">Bilancia i 2 oscillatori</div>
+            <div class="knob-graphic">
+              <svg class="knob-arc" viewBox="0 0 50 50">
+                <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                <circle class="knob-arc-fill fill-amber" cx="25" cy="25" r="20"></circle>
+              </svg>
+              <div class="knob-dial"><div class="knob-pointer pointer-amber"></div></div>
+            </div>
+            <div class="knob-value">0.50</div>
           </div>
 
           <div class="rotary-knob" data-param="bass_drive" data-min="0.5" data-max="10" data-step="0.2" data-default="4.0" data-unit="x">

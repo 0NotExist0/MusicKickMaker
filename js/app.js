@@ -4,7 +4,7 @@
 
 import { KickSynthEngine } from "./audio-engine.js";
 import { PresetManager, PRESETS, PRESET_CATEGORIES, DEFAULT_KICK_PARAMS } from "./presets.js";
-import { BassPresetManager, BASS_PRESETS, BASS_PRESET_CATEGORIES } from "./bass-presets.js";
+import { BassPresetManager, BASS_PRESETS, BASS_PRESET_CATEGORIES, DEFAULT_BASS_PARAMS } from "./bass-presets.js";
 import { Visualizer } from "./visualizer.js";
 import { StepSequencer } from "./sequencer.js";
 import { UIManager } from "./ui.js";
@@ -26,7 +26,11 @@ class KickForgeApp {
     this.currentBassCategory = "all";
 
     this.currentKickParams = { ...DEFAULT_KICK_PARAMS, ...PRESETS[0].params };
-    this.currentBassParams = { ...BASS_PRESETS[0].params };
+    this.currentBassParams = { ...DEFAULT_BASS_PARAMS, ...BASS_PRESETS[0].params };
+
+    // Livelli mixer (cassa/basso)
+    this.mixKickLevel = 1.0;
+    this.mixBassLevel = 1.0;
 
     this.currentBpm = PRESETS[0].bpm || 175;
     this.currentKickPresetId = PRESETS[0].id;
@@ -54,7 +58,7 @@ class KickForgeApp {
       if (paramName.startsWith("bass_")) {
         this.currentBassParams[paramName] = value;
         if (!this.sequencer.isPlaying) {
-          this.audioEngine.triggerBassNote(this.currentBassParams, { note: "C2", active: 1, accent: 1 });
+          this.audioEngine.triggerBassNote(this.currentBassParams, { note: "C2", active: 1, accent: 1 }, null, 0.25, true);
         }
       } else {
         this.currentKickParams[paramName] = value;
@@ -324,6 +328,63 @@ class KickForgeApp {
   }
 
   // ==========================================
+  // APPLICA PARAMETRI BASSO (per variazioni / AI)
+  // ==========================================
+  applyBassParams(params) {
+    this.currentBassParams = { ...DEFAULT_BASS_PARAMS, ...params };
+    Object.keys(this.currentBassParams).forEach(p => this.uiManager.setKnobValue(p, this.currentBassParams[p]));
+
+    const wave1 = document.querySelector(`input[name="bass_osc1_wave"][value="${this.currentBassParams.bass_osc1_wave}"]`);
+    if (wave1) wave1.checked = true;
+    const wave2 = document.querySelector(`input[name="bass_osc2_wave"][value="${this.currentBassParams.bass_osc2_wave}"]`);
+    if (wave2) wave2.checked = true;
+    const toggleBass = document.getElementById("toggle-bass-module");
+    if (toggleBass) toggleBass.checked = !!this.currentBassParams.bass_enabled;
+
+    if (!this.sequencer.isPlaying) {
+      this.audioEngine.triggerBassNote(this.currentBassParams, { note: "C2", active: 1, accent: 1 }, null, 0.25, true);
+    }
+  }
+
+  // ==========================================
+  // CREA VARIAZIONI (mutazione musicale dei parametri)
+  // ==========================================
+  mutateParams(params, intensity) {
+    const out = { ...params };
+    document.querySelectorAll(".rotary-knob").forEach(knob => {
+      const p = knob.dataset.param;
+      if (!(p in out) || typeof out[p] !== "number") return;
+      const min = parseFloat(knob.dataset.min);
+      const max = parseFloat(knob.dataset.max);
+      const step = parseFloat(knob.dataset.step || 0);
+      const range = max - min;
+      let v = out[p] + (Math.random() * 2 - 1) * intensity * range;
+      v = Math.min(max, Math.max(min, v));
+      if (step > 0) v = Math.round((v - min) / step) * step + min;
+      out[p] = v;
+    });
+    return out;
+  }
+
+  variateKick(intensity = 0.22) {
+    const p = this.mutateParams(this.currentKickParams, intensity);
+    if (Math.random() < 0.35) p.screech_enabled = !p.screech_enabled;
+    if (Math.random() < 0.30) p.drive_type = ["tube", "diode", "hard"][Math.floor(Math.random() * 3)];
+    if (Math.random() < 0.25) p.body_waveform = Math.random() < 0.5 ? "sine" : "triangle";
+    this.applyKickParams(p, this.currentBpm, "🎲 Variazione della cassa — regola e premi 💾 Salva Suono se ti piace.");
+    this.triggerKick();
+    this.uiManager.showToast("🎲 Variazione cassa creata", "info");
+  }
+
+  variateBass(intensity = 0.22) {
+    const p = this.mutateParams(this.currentBassParams, intensity);
+    if (Math.random() < 0.30) p.bass_osc1_wave = Math.random() < 0.5 ? "sawtooth" : "square";
+    if (Math.random() < 0.30) p.bass_osc2_wave = Math.random() < 0.5 ? "square" : "sawtooth";
+    this.applyBassParams(p);
+    this.uiManager.showToast("🎲 Variazione basso creata", "info");
+  }
+
+  // ==========================================
   // GESTIONE PRESET BASSO
   // ==========================================
   renderBassCategoryTabs() {
@@ -366,7 +427,7 @@ class KickForgeApp {
     if (!preset) return;
 
     this.currentBassPresetId = preset.id;
-    this.currentBassParams = { ...preset.params };
+    this.currentBassParams = { ...DEFAULT_BASS_PARAMS, ...preset.params };
 
     if (preset.pattern) {
       this.sequencer.setBassPattern(preset.pattern);
@@ -415,7 +476,7 @@ class KickForgeApp {
         col.classList.toggle("active", !!active);
         triggerBtn.classList.toggle("active", !!active);
         if (active && !this.sequencer.isPlaying) {
-          this.audioEngine.triggerBassNote(this.currentBassParams, step);
+          this.audioEngine.triggerBassNote(this.currentBassParams, step, null, 0.25, !!this.sequencer.kickSteps[idx]);
         }
       });
 
@@ -432,7 +493,7 @@ class KickForgeApp {
       noteSelect.addEventListener("change", (e) => {
         this.sequencer.setBassStepNote(idx, e.target.value);
         if (!this.sequencer.isPlaying) {
-          this.audioEngine.triggerBassNote(this.currentBassParams, this.sequencer.bassPattern[idx]);
+          this.audioEngine.triggerBassNote(this.currentBassParams, this.sequencer.bassPattern[idx], null, 0.25, !!this.sequencer.kickSteps[idx]);
         }
       });
 
@@ -733,7 +794,9 @@ class KickForgeApp {
               isLoop: true,
               bpm: this.currentBpm,
               bitDepth,
-              sampleRate
+              sampleRate,
+              kickLevel: this.mixKickLevel,
+              bassLevel: this.mixBassLevel
             }
           );
 
@@ -928,6 +991,36 @@ class KickForgeApp {
         runAI();
       });
     });
+
+    // 10. Mixer Cassa / Basso
+    const mixKickSlider = document.getElementById("mix-kick-slider");
+    const mixBassSlider = document.getElementById("mix-bass-slider");
+    const mixKickVal = document.getElementById("mix-kick-val");
+    const mixBassVal = document.getElementById("mix-bass-val");
+    const applyMix = () => this.audioEngine.setMix(this.mixKickLevel, this.mixBassLevel);
+    if (mixKickSlider) {
+      mixKickSlider.addEventListener("input", (e) => {
+        this.mixKickLevel = parseFloat(e.target.value);
+        if (mixKickVal) mixKickVal.textContent = `${Math.round(this.mixKickLevel * 100)}%`;
+        applyMix();
+      });
+    }
+    if (mixBassSlider) {
+      mixBassSlider.addEventListener("input", (e) => {
+        this.mixBassLevel = parseFloat(e.target.value);
+        if (mixBassVal) mixBassVal.textContent = `${Math.round(this.mixBassLevel * 100)}%`;
+        applyMix();
+        if (!this.sequencer.isPlaying) {
+          this.audioEngine.triggerBassNote(this.currentBassParams, { note: "C2", active: 1, accent: 1 }, null, 0.25, true);
+        }
+      });
+    }
+
+    // 11. Crea Variazione
+    const varKickBtn = document.getElementById("variate-kick-btn");
+    const varBassBtn = document.getElementById("variate-bass-btn");
+    if (varKickBtn) varKickBtn.addEventListener("click", () => this.variateKick());
+    if (varBassBtn) varBassBtn.addEventListener("click", () => this.variateBass());
 
     // Hotkeys
     window.addEventListener("keydown", (e) => {

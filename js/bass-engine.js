@@ -22,7 +22,7 @@ export class BassSynthEngine {
   /**
    * Genera la voce del basso all'interno di un AudioContext (tempo reale o offline)
    */
-  buildBassVoice(targetCtx, destination, params, stepData, startTime = 0, duration = 0.2) {
+  buildBassVoice(targetCtx, destination, params, stepData, startTime = 0, duration = 0.2, duckUnderKick = false) {
     if (!params.bass_enabled || !stepData.active) return;
 
     const now = startTime;
@@ -117,9 +117,27 @@ export class BassSynthEngine {
     osc2.connect(osc2Gain);
     osc2Gain.connect(filter);
 
+    // ==========================================
+    // SIDECHAIN / DUCKING (pompaggio sotto la cassa)
+    // Quando la nota di basso coincide con un colpo di cassa, l'ampiezza
+    // parte abbassata e risale: è il "respiro" che fa spazio alla cassa.
+    // ==========================================
+    const scGain = targetCtx.createGain();
+    const sc = Math.min(1, Math.max(0, params.bass_sidechain ?? 0));
+    if (duckUnderKick && sc > 0.01) {
+      const rel = Math.min(0.18, Math.max(0.05, duration * 1.6));
+      const ducked = Math.max(0.02, 1 - sc);
+      scGain.gain.setValueAtTime(ducked, now);
+      scGain.gain.setValueAtTime(ducked, now + 0.004);
+      scGain.gain.linearRampToValueAtTime(1.0, now + rel);
+    } else {
+      scGain.gain.setValueAtTime(1.0, now);
+    }
+
     filter.connect(driveShaper);
     driveShaper.connect(ampGain);
-    ampGain.connect(bassBus);
+    ampGain.connect(scGain);
+    scGain.connect(bassBus);
 
     if (subGain) {
       // Sub pulito diretto nel bus per evitare che la distorsione rovini i sub bassi

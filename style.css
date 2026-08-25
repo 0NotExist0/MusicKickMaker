@@ -1914,3 +1914,89 @@ body {
 .ai-gen-status.status-success { border-color: var(--accent-303); color: #86efac; background: rgba(34, 197, 94, 0.08); }
 .ai-gen-status.status-error   { border-color: var(--accent-red); color: #fca5a5; background: rgba(239, 68, 68, 0.08); }
 .ai-gen-status.status-info    { border-color: var(--accent-cyan); color: #67e8f9; background: rgba(6, 182, 212, 0.08); }
+
+/* ==============================================
+   MIXER CASSA/BASSO & VARIAZIONI
+   ============================================== */
+.mixer-var-card {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 720px) { .mixer-var-card { grid-template-columns: 1fr; } }
+
+.mixer-block, .var-block {
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mixer-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+
+.mixer-tag, .var-tag {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent-amber);
+  white-space: nowrap;
+}
+.var-tag { color: var(--accent-purple); }
+
+.mixer-hint { font-size: 11.5px; color: var(--text-muted); }
+
+.mixer-rows { display: flex; flex-direction: column; gap: 12px; }
+
+.mixer-row { display: flex; align-items: center; gap: 12px; }
+
+.mixer-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  width: 54px;
+  flex: 0 0 54px;
+}
+
+.mixer-slider {
+  flex: 1 1 auto;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-3);
+  outline: none;
+}
+.mixer-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--accent-amber);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+}
+.mixer-slider::-moz-range-thumb {
+  width: 18px; height: 18px; border: none;
+  border-radius: 50%;
+  background: var(--accent-amber);
+  cursor: pointer;
+}
+.mixer-slider-bass::-webkit-slider-thumb { background: var(--accent-cyan); }
+.mixer-slider-bass::-moz-range-thumb { background: var(--accent-cyan); }
+
+.mixer-val {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  width: 46px;
+  flex: 0 0 46px;
+  text-align: right;
+}
+
+.var-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+.var-btn { flex: 1 1 auto; min-width: 130px; }

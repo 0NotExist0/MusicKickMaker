@@ -364,6 +364,13 @@ export const CONTROL_TOOLTIPS = {
     ifLow: "Oscillatori perfettamente intonati, basso compatto e solido al centro.",
     tip: "💡 Usalo con onde Sawtooth per un basso mostruosamente grosso."
   },
+  bass_osc2_mix: {
+    title: "MIX OSCILLATORE 2 (Bilanciamento OSC)",
+    what: "Quanto pesa il secondo oscillatore rispetto al primo nel timbro del basso.",
+    ifHigh: "Il secondo oscillatore (spesso Quadra) domina: basso più cavo, ronzante e presente nei medi.",
+    ifLow: "Resta quasi solo il primo oscillatore: timbro più semplice e diretto.",
+    tip: "💡 Alzalo insieme al Detune per un Reese più largo; abbassalo per un basso più pulito."
+  },
   bass_drive: {
     title: "DISTORSIONE BASSO (Bass Drive)",
     what: "Saturatore overdrive a diodo dedicato per scaldare e incattivire la linea di basso.",

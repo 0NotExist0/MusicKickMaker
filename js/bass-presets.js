@@ -3,6 +3,28 @@
  * Techno, Acidcore, Industrial, Frenchcore, Uptempo, Rawstyle, EBM, Deep Sub, Zaag
  */
 
+/**
+ * Parametri di default del basso. Ogni preset viene fuso sopra questa base,
+ * così i knob si resettano correttamente e il motore ha sempre tutti i valori.
+ */
+export const DEFAULT_BASS_PARAMS = {
+  bass_enabled: true,
+  bass_type: "acid303",
+  bass_osc1_wave: "sawtooth",
+  bass_osc2_wave: "square",
+  bass_osc2_mix: 0.5,
+  bass_detune: 8,
+  bass_cutoff: 1800,
+  bass_resonance: 12,
+  bass_envMod: 0.8,
+  bass_decay: 0.18,
+  bass_drive: 4.0,
+  bass_glide: 0.08,
+  bass_sidechain: 0.7,
+  bass_sub_level: 0.6,
+  bass_volume: 0.9
+};
+
 export const BASS_PRESET_CATEGORIES = [
   { id: "all", label: "Tutti i Bassi" },
   { id: "acid303", label: "🧪 Basso 303 Acid" },

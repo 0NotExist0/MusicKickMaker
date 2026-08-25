@@ -130,13 +130,14 @@ export class StepSequencer {
     if (this.kickSteps[stepNumber]) {
       const vel = this.kickVelocities[stepNumber] || 1.0;
       const kParams = this.getKickParamsCallback();
-      this.audioEngine.buildKickVoice(this.audioEngine.ctx, this.audioEngine.masterGainNode, kParams, time, vel);
+      this.audioEngine.buildKickVoice(this.audioEngine.ctx, this.audioEngine.kickBus, kParams, time, vel);
     }
 
-    // 2. Suona Basso (Bassline)
+    // 2. Suona Basso (Bassline) — con ducking se sullo stesso step c'è la cassa
     if (this.bassEnabled && this.bassPattern[stepNumber]?.active) {
       const bParams = this.getBassParamsCallback();
-      this.audioEngine.triggerBassNote(bParams, this.bassPattern[stepNumber], time, stepDuration);
+      const duck = !!this.kickSteps[stepNumber];
+      this.audioEngine.triggerBassNote(bParams, this.bassPattern[stepNumber], time, stepDuration, duck);
     }
 
     // 3. Suona Hi-Hat

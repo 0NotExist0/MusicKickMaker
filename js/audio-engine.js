@@ -31,10 +31,34 @@ export class KickSynthEngine {
     this.masterGainNode = this.ctx.createGain();
     this.masterGainNode.gain.value = 1.0;
 
+    // Bus di mix dedicati: permettono di bilanciare cassa e basso in modo indipendente
+    this.kickBus = this.ctx.createGain();
+    this.bassBus = this.ctx.createGain();
+    this.kickBus.gain.value = this.mixKickLevel ?? 1.0;
+    this.bassBus.gain.value = this.mixBassLevel ?? 1.0;
+    this.kickBus.connect(this.masterGainNode);
+    this.bassBus.connect(this.masterGainNode);
+
     this.masterGainNode.connect(this.analyserNode);
     this.analyserNode.connect(this.ctx.destination);
 
     this.isInitialized = true;
+  }
+
+  // Imposta i livelli del mixer (cassa/basso) in tempo reale
+  setMix(kickLevel, bassLevel) {
+    if (kickLevel != null) this.mixKickLevel = kickLevel;
+    if (bassLevel != null) this.mixBassLevel = bassLevel;
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const running = this.ctx.state === "running";
+    const set = (node, v) => {
+      if (!node) return;
+      if (running) node.gain.setTargetAtTime(v, now, 0.01); // rampa morbida senza click
+      else node.gain.value = v;                              // istantaneo se il contesto è fermo
+    };
+    set(this.kickBus, this.mixKickLevel ?? 1.0);
+    set(this.bassBus, this.mixBassLevel ?? 1.0);
   }
 
   async resumeIfNeeded() {
@@ -429,17 +453,17 @@ export class KickSynthEngine {
     if (!this.isInitialized) this.init();
     this.resumeIfNeeded();
     const now = this.ctx.currentTime;
-    return this.buildKickVoice(this.ctx, this.masterGainNode, params, now, velocity);
+    return this.buildKickVoice(this.ctx, this.kickBus, params, now, velocity);
   }
 
   /**
    * Suona singola nota di basso
    */
-  triggerBassNote(params, stepData, startTime = null, duration = 0.2) {
+  triggerBassNote(params, stepData, startTime = null, duration = 0.2, duckUnderKick = false) {
     if (!this.isInitialized) this.init();
     this.resumeIfNeeded();
     const now = startTime !== null ? startTime : this.ctx.currentTime;
-    this.bassEngine.buildBassVoice(this.ctx, this.masterGainNode, params, stepData, now, duration);
+    this.bassEngine.buildBassVoice(this.ctx, this.bassBus, params, stepData, now, duration, duckUnderKick);
   }
 
   /**
@@ -489,8 +513,15 @@ export class KickSynthEngine {
     }
 
     const offlineCtx = new OfflineAudioContext(2, Math.ceil(sampleRate * renderDuration), sampleRate);
-    const dest = offlineCtx.destination;
     const stepDuration = (60 / bpm) * 0.25;
+
+    // Bus di mix anche in offline, così l'export rispecchia il bilanciamento e il sidechain
+    const kickBus = offlineCtx.createGain();
+    const bassBus = offlineCtx.createGain();
+    kickBus.gain.value = options.kickLevel ?? this.mixKickLevel ?? 1.0;
+    bassBus.gain.value = options.bassLevel ?? this.mixBassLevel ?? 1.0;
+    kickBus.connect(offlineCtx.destination);
+    bassBus.connect(offlineCtx.destination);
 
     if (isLoop) {
       for (let step = 0; step < 16; step++) {
@@ -499,21 +530,22 @@ export class KickSynthEngine {
         // Render Kick
         if (mode !== "bass_only" && sequencer.kickSteps[step]) {
           const vel = sequencer.kickVelocities[step] || 1.0;
-          this.buildKickVoice(offlineCtx, dest, kickParams, time, vel);
+          this.buildKickVoice(offlineCtx, kickBus, kickParams, time, vel);
         }
 
-        // Render Bass
+        // Render Bass (con ducking quando coincide con la cassa)
         if (mode !== "kick_only" && sequencer.bassPattern && sequencer.bassPattern[step]?.active) {
-          this.bassEngine.buildBassVoice(offlineCtx, dest, bassParams, sequencer.bassPattern[step], time, stepDuration);
+          const duck = !!sequencer.kickSteps[step];
+          this.bassEngine.buildBassVoice(offlineCtx, bassBus, bassParams, sequencer.bassPattern[step], time, stepDuration, duck);
         }
       }
     } else {
       if (mode !== "bass_only") {
-        this.buildKickVoice(offlineCtx, dest, kickParams, 0, 1.0);
+        this.buildKickVoice(offlineCtx, kickBus, kickParams, 0, 1.0);
       }
       if (mode === "bass_only") {
         const firstActive = sequencer.bassPattern?.find(s => s.active) || { note: "C2", active: 1 };
-        this.bassEngine.buildBassVoice(offlineCtx, dest, bassParams, firstActive, 0, 0.4);
+        this.bassEngine.buildBassVoice(offlineCtx, bassBus, bassParams, firstActive, 0, 0.4, false);
       }
     }
 
