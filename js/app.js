@@ -594,8 +594,13 @@ class KickForgeApp {
             this._rememberGroove(this._readyGroove);
             this._readyGroove = null;
             this.uiManager.showToast("🔄🤖 Groove evoluto dall'AI", "info");
+          } else if (this._grooveLibrary && this._grooveLibrary.length) {
+            // AI non ancora pronta: pesca un groove curato dalla libreria (mai attesa)
+            const g = this._grooveLibrary[Math.floor(Math.random() * this._grooveLibrary.length)];
+            this.applyGroove(g, true);
+            this.uiManager.showToast("🔄🎁 Groove dalla libreria (l'AI arriva)", "info");
           } else {
-            // non ancora pronto: variazione casuale per non restare fermi
+            // nessuna libreria: variazione casuale per non restare fermi
             this.variateBassPattern(true);
             this.variateHatsPattern(true);
           }
