@@ -198,6 +198,13 @@ export const CONTROL_TOOLTIPS = {
     ifLow: "Sub profondissimo e sismico (38-48Hz - note Re/Mi/Fa) che fa tremare il pavimento.",
     tip: "💡 Accordalo con la tonalità della tua traccia per un basso perfetto."
   },
+  body_tailStartDelay: {
+    title: "PARTENZA CODA CASSA (Tail Start Delay)",
+    what: "Ritardo in millisecondi con cui parte la coda/sub rispetto al punch iniziale.",
+    ifHigh: "La coda entra ritardata dopo il transiente creando un effetto stacco/respiro o rimbalzo.",
+    ifLow: "La coda parte istantaneamente insieme al punch per un colpo uniforme e continuo.",
+    tip: "💡 Imposta a 15-40ms se vuoi un punch chirurgico seguito da una coda sub separata."
+  },
   body_punchDecay: {
     title: "VELOCITÀ BOTTA (Punch Decay Cassa)",
     what: "Durata della discesa iniziale dal picco al pugno principale.",
@@ -398,6 +405,13 @@ export const CONTROL_TOOLTIPS = {
     ifHigh: "Scivolamenti lunghi, fluidi e morbidi tra le note (il leggendario effetto TB-303 Slide).",
     ifLow: "Cambio nota istantaneo e secco.",
     tip: "💡 Attiva lo SLIDE sugli step del sequencer per sentire la magia acida."
+  },
+  bass_startOffset: {
+    title: "TIMING PARTENZA BASSO (Start Offset / Delay)",
+    what: "Regola l'anticipo o il ritardo temporale (+/- ms) con cui parte la nota di basso rispetto al colpo di cassa.",
+    ifHigh: "Il basso entra con ritardo post-kick (+20ms/+40ms): perfetto per rolling bass e rimbalzi frenchcore senza conflitti di fase col punch.",
+    ifLow: "Il basso entra in anticipo o esattamente sul battere (0ms): incastro chirurgico per techno dritta.",
+    tip: "💡 Usa +20ms a +35ms per il classico 'rolling bass' che non soffoca il pugno della cassa."
   },
   bass_sidechain: {
     title: "AGGANCIO CON LA CASSA (Sidechain Ducking)",

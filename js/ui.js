@@ -321,10 +321,9 @@ export class UIManager {
   }
 
   setKnobValue(paramName, value) {
-    const knob = this.knobElements.find(k => k.paramName === paramName);
-    if (knob) {
-      knob.updateUI(value);
-    }
+    this.knobElements
+      .filter(k => k.paramName === paramName)
+      .forEach(knob => knob.updateUI(value));
   }
 
   showToast(message, type = "info") {

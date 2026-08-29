@@ -172,8 +172,9 @@ export class KickSynthEngine {
     layerBus.gain.value = velocity * extremeMode;
 
     const punchDecay = Math.max(0.01, params.body_punchDecay || 0.035);
-    const tailDecay = Math.max(0.05, params.body_tailDecay || 0.3);
-    const totalKickDuration = punchDecay + tailDecay + 0.2;
+    const tailStartDelay = Math.max(0, params.body_tailStartDelay || 0);
+    const tailDecay = Math.max(0.03, params.body_tailDecay || 0.3);
+    const totalKickDuration = punchDecay + tailStartDelay + tailDecay + 0.25;
 
     // ==========================================
     // LAYER 1: ATTACCO 303 & FISCHIO ACIDO
@@ -310,18 +311,30 @@ export class KickSynthEngine {
     }
 
     // ==========================================
-    // LAYER 2: CORPO & BOTTA PRINCIPALE (Sweep Pitch)
+    // LAYER 2: CORPO & BOTTA PRINCIPALE (Sweep Pitch & Coda)
     // ==========================================
     if (params.body_enabled) {
       const bodyGain = targetCtx.createGain();
       const bodyVol = (params.body_volume || 1.0) * (1 + (superBotta - 1) * 0.35);
-      // Livello della coda: quanto è forte la parte lunga rispetto al pugno iniziale
       const tailLevel = Math.min(1.5, Math.max(0.05, params.body_tailLevel ?? 1.0));
+
+      const tPunchEnd = now + punchDecay;
+      const tTailStart = tPunchEnd + tailStartDelay;
+      const tTailEnd = tTailStart + tailDecay;
+
       bodyGain.gain.setValueAtTime(0.0001, now);
       bodyGain.gain.linearRampToValueAtTime(bodyVol, now + 0.0015);
       bodyGain.gain.setValueAtTime(bodyVol, now + punchDecay * 0.55);
-      bodyGain.gain.exponentialRampToValueAtTime(Math.max(0.0001, bodyVol * tailLevel), now + punchDecay);
-      bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + punchDecay + tailDecay);
+
+      if (tailStartDelay > 0.005) {
+        // Coda che entra con ritardo calibrato post-punch
+        bodyGain.gain.exponentialRampToValueAtTime(Math.max(0.0001, bodyVol * 0.2), tPunchEnd);
+        bodyGain.gain.linearRampToValueAtTime(Math.max(0.0001, bodyVol * tailLevel), tTailStart);
+      } else {
+        // Coda immediata
+        bodyGain.gain.exponentialRampToValueAtTime(Math.max(0.0001, bodyVol * tailLevel), tPunchEnd);
+      }
+      bodyGain.gain.exponentialRampToValueAtTime(0.0001, tTailEnd);
 
       const bodyOsc = targetCtx.createOscillator();
       const bodyWave = params.body_waveform || "sine";
@@ -332,8 +345,8 @@ export class KickSynthEngine {
       const tailFreq = params.body_tailFreq || 50;
 
       bodyOsc.frequency.setValueAtTime(startFreq, now);
-      bodyOsc.frequency.exponentialRampToValueAtTime(Math.max(20, punchFreq), now + punchDecay);
-      bodyOsc.frequency.exponentialRampToValueAtTime(Math.max(20, tailFreq), now + punchDecay + tailDecay);
+      bodyOsc.frequency.exponentialRampToValueAtTime(Math.max(20, punchFreq), tPunchEnd);
+      bodyOsc.frequency.exponentialRampToValueAtTime(Math.max(20, tailFreq), tTailEnd);
 
       if ((params.fm_amount || 0) > 5) {
         const fmOsc = targetCtx.createOscillator();
@@ -358,7 +371,7 @@ export class KickSynthEngine {
       bodyGain.connect(layerBus);
 
       bodyOsc.start(now);
-      bodyOsc.stop(now + punchDecay + tailDecay + 0.05);
+      bodyOsc.stop(tTailEnd + 0.05);
     }
 
     // ==========================================
@@ -577,10 +590,12 @@ export class KickSynthEngine {
           this.buildKickVoice(offlineCtx, kickBus, kickParams, time, vel);
         }
 
-        // Render Bass (con ducking quando coincide con la cassa)
+        // Render Bass (con ducking quando coincide con la cassa e rispetto del timing offset)
         if (mode !== "kick_only" && sequencer.bassPattern && sequencer.bassPattern[step]?.active) {
           const duck = !!sequencer.kickSteps[step];
-          this.bassEngine.buildBassVoice(offlineCtx, bassBus, bassParams, sequencer.bassPattern[step], time, stepDuration, duck);
+          const bassOffset = bassParams.bass_startOffset || 0.0;
+          const bassTime = Math.max(0, time + bassOffset);
+          this.bassEngine.buildBassVoice(offlineCtx, bassBus, bassParams, sequencer.bassPattern[step], bassTime, stepDuration, duck);
         }
       }
     } else {
@@ -589,7 +604,8 @@ export class KickSynthEngine {
       }
       if (mode === "bass_only") {
         const firstActive = sequencer.bassPattern?.find(s => s.active) || { note: "C2", active: 1 };
-        this.bassEngine.buildBassVoice(offlineCtx, bassBus, bassParams, firstActive, 0, 0.4, false);
+        const bassOffset = Math.max(0, bassParams.bass_startOffset || 0.0);
+        this.bassEngine.buildBassVoice(offlineCtx, bassBus, bassParams, firstActive, bassOffset, 0.4, false);
       }
     }
 

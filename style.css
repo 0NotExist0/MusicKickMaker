@@ -2122,3 +2122,189 @@ body {
   margin-left: auto;
 }
 @media (max-width: 600px) { .fills-hint { display: none; } }
+
+/* ==========================================================================
+   MODELLATORE INTERATTIVO CURVE & LINEE (CODA KICK, PITCH & BASSO)
+   ========================================================================== */
+.curve-editor-master-section {
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: var(--shadow-panel);
+  position: relative;
+  overflow: hidden;
+}
+
+.curve-master-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.curve-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.curve-badge-glow {
+  align-self: flex-start;
+  background: rgba(6, 182, 212, 0.15);
+  border: 1px solid var(--accent-cyan);
+  color: var(--accent-cyan);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.08em;
+  box-shadow: 0 0 12px var(--accent-cyan-glow);
+}
+
+.curve-main-title {
+  font-family: var(--font-brand);
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+}
+
+.curve-sub-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.curve-mode-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.curve-tab-btn {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
+  font-family: var(--font-main);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.curve-tab-btn:hover {
+  background: var(--bg-surface-3);
+  color: var(--text-primary);
+  border-color: var(--border-highlight);
+}
+
+.curve-tab-btn.active {
+  background: rgba(6, 182, 212, 0.2);
+  border-color: var(--accent-cyan);
+  color: #ffffff;
+  box-shadow: 0 0 12px var(--accent-cyan-glow);
+}
+
+.curve-tab-btn[data-curve-mode="kick_pitch"].active {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 12px var(--accent-amber-glow);
+}
+
+.curve-tab-btn[data-curve-mode="bass_timing"].active {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: var(--accent-purple);
+  box-shadow: 0 0 12px var(--accent-purple-glow);
+}
+
+.curve-tab-btn[data-curve-mode="bass_sidechain"].active {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: var(--accent-303);
+  box-shadow: 0 0 12px var(--accent-303-glow);
+}
+
+.curve-presets-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.curve-preset-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+
+.curve-preset-chip {
+  background: var(--bg-surface-3);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.curve-preset-chip:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--border-highlight);
+  transform: translateY(-1px);
+}
+
+.curve-preset-chip:active {
+  transform: translateY(0);
+}
+
+.curve-canvas-wrapper {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  background: #0a0c10;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 4px 16px rgba(0, 0, 0, 0.85);
+  overflow: hidden;
+}
+
+#curve-editor-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.curve-fine-controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 14px;
+  padding-top: 4px;
+}
+
+@media (max-width: 768px) {
+  .curve-canvas-wrapper {
+    height: 200px;
+  }
+  .curve-fine-controls-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+}
+

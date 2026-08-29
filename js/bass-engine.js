@@ -35,13 +35,16 @@ export class BassSynthEngine {
     const bassBus = targetCtx.createGain();
     bassBus.gain.value = 1.0;
 
-    // Inviluppo di ampiezza
-    const ampGain = targetCtx.createGain();
+    // Inviluppo di ampiezza e durata
+    const bAttack = Math.max(0.001, params.bass_attack || 0.004);
     const bDecay = Math.max(0.04, (params.bass_decay || 0.18) * (isAccent ? 1.3 : 1.0));
-    const totalDuration = isSlide ? duration * 1.2 : Math.min(duration * 0.95, bDecay + 0.05);
+    const gateLen = Math.max(0.2, params.bass_gateLength || 1.0);
+    const effectiveDuration = duration * gateLen;
+    const totalDuration = isSlide ? effectiveDuration * 1.25 : Math.max(0.04, Math.min(effectiveDuration * 0.98, bDecay + 0.08));
 
     ampGain.gain.setValueAtTime(0.0001, now);
-    ampGain.gain.linearRampToValueAtTime((params.bass_volume || 0.9) * velocity, now + 0.004);
+    ampGain.gain.linearRampToValueAtTime((params.bass_volume || 0.9) * velocity, now + bAttack);
+    // Sustain parziale e decadimento
     ampGain.gain.exponentialRampToValueAtTime(0.0001, now + totalDuration);
 
     // ==========================================
@@ -125,10 +128,10 @@ export class BassSynthEngine {
     const scGain = targetCtx.createGain();
     const sc = Math.min(1, Math.max(0, params.bass_sidechain ?? 0));
     if (duckUnderKick && sc > 0.01) {
-      const rel = Math.min(0.18, Math.max(0.05, duration * 1.6));
-      const ducked = Math.max(0.02, 1 - sc);
+      const rel = params.bass_sidechainRelease || Math.min(0.25, Math.max(0.04, duration * 1.5));
+      const ducked = Math.max(0.01, 1 - sc);
       scGain.gain.setValueAtTime(ducked, now);
-      scGain.gain.setValueAtTime(ducked, now + 0.004);
+      scGain.gain.setValueAtTime(ducked, now + 0.003);
       scGain.gain.linearRampToValueAtTime(1.0, now + rel);
     } else {
       scGain.gain.setValueAtTime(1.0, now);

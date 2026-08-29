@@ -50,6 +50,7 @@ export const DEFAULT_KICK_PARAMS = {
   body_punchFreq: 150,
   body_tailFreq: 50,
   body_punchDecay: 0.038,
+  body_tailStartDelay: 0.0,
   body_tailDecay: 0.30,
   body_tailLevel: 1.0,
   body_volume: 1.0,

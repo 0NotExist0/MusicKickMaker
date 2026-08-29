@@ -17,10 +17,14 @@ export const DEFAULT_BASS_PARAMS = {
   bass_cutoff: 1800,
   bass_resonance: 12,
   bass_envMod: 0.8,
+  bass_attack: 0.004,
   bass_decay: 0.18,
+  bass_gateLength: 1.0,
+  bass_startOffset: 0.0,
   bass_drive: 4.0,
   bass_glide: 0.08,
   bass_sidechain: 0.7,
+  bass_sidechainRelease: 0.12,
   bass_sub_level: 0.6,
   bass_volume: 0.9
 };

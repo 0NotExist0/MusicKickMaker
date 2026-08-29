@@ -398,6 +398,122 @@
     </section>
 
     <!-- ====================================================================== -->
+    <!-- MODELLATORE INTERATTIVO CURVE & LINEE (CODA KICK, PITCH & BASSO)       -->
+    <!-- ====================================================================== -->
+    <section class="curve-editor-master-section">
+      <div class="curve-master-header">
+        <div class="curve-title-group">
+          <span class="curve-badge-glow">MODELLATORE CURVE & LINEE</span>
+          <h2 class="curve-main-title">📈 CURVE & TIMING CODA CASSA & BASSO</h2>
+          <span class="curve-sub-title">Trascina i nodi sul grafico per modellare con curve e linee la coda/pitch del kick, la partenza (+/- ms), la durata e l'inviluppo</span>
+        </div>
+        <div class="curve-mode-tabs" id="curve-mode-tabs-container">
+          <button class="curve-tab-btn active" data-curve-mode="kick_tail">🎯 Coda Kick (Ampiezza & Delay)</button>
+          <button class="curve-tab-btn" data-curve-mode="kick_pitch">⚡ Pitch Sweep Kick (Hz)</button>
+          <button class="curve-tab-btn" data-curve-mode="bass_timing">🎸 Timing & Durata Basso</button>
+          <button class="curve-tab-btn" data-curve-mode="bass_sidechain">🌊 Sidechain Ducking</button>
+        </div>
+      </div>
+
+      <!-- Preset rapidi curve -->
+      <div class="curve-presets-bar">
+        <span class="curve-preset-label">FORME CURVE VELOCI:</span>
+        <button class="curve-preset-chip" data-curve-preset="punch_dry">⚡ Punch Secco & Coda Corta</button>
+        <button class="curve-preset-chip" data-curve-preset="delayed_tail_fade">⏳ Coda Ritardata (+40ms)</button>
+        <button class="curve-preset-chip" data-curve-preset="acid_long_tail">🧪 Coda Lunga Sismica</button>
+        <button class="curve-preset-chip" data-curve-preset="rolling_offset">🌀 Basso Rolling (+25ms Delay)</button>
+        <button class="curve-preset-chip" data-curve-preset="preshift_tight">⏱️ Basso in Anticipo (-10ms)</button>
+        <button class="curve-preset-chip" data-curve-preset="french_gallop">🚀 Frenchcore Gallop Offset</button>
+      </div>
+
+      <!-- Canvas Interattivo Curve -->
+      <div class="curve-canvas-wrapper">
+        <canvas id="curve-editor-canvas"></canvas>
+      </div>
+
+      <!-- Manopole di regolazione rapida collegate in tempo reale alla curva -->
+      <div class="curve-fine-controls-grid">
+        <div class="rotary-knob" data-param="body_tailStartDelay" data-min="0" data-max="0.12" data-step="0.002" data-default="0.00" data-unit="s">
+          <div class="knob-label">PARTENZA CODA</div>
+          <div class="knob-sublabel">Delay Coda Post-Punch</div>
+          <div class="knob-graphic">
+            <svg class="knob-arc" viewBox="0 0 50 50">
+              <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+              <circle class="knob-arc-fill fill-cyan" cx="25" cy="25" r="20"></circle>
+            </svg>
+            <div class="knob-dial"><div class="knob-pointer pointer-cyan"></div></div>
+          </div>
+          <div class="knob-value">0.00s</div>
+        </div>
+
+        <div class="rotary-knob" data-param="body_tailDecay" data-min="0.05" data-max="1.0" data-step="0.01" data-default="0.30" data-unit="s">
+          <div class="knob-label">LUNGHEZZA CODA</div>
+          <div class="knob-sublabel">Durata Sub Kick</div>
+          <div class="knob-graphic">
+            <svg class="knob-arc" viewBox="0 0 50 50">
+              <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+              <circle class="knob-arc-fill fill-amber" cx="25" cy="25" r="20"></circle>
+            </svg>
+            <div class="knob-dial"><div class="knob-pointer pointer-amber"></div></div>
+          </div>
+          <div class="knob-value">0.30s</div>
+        </div>
+
+        <div class="rotary-knob" data-param="body_tailLevel" data-min="0.05" data-max="1.5" data-step="0.05" data-default="1.0" data-unit="x">
+          <div class="knob-label">LIVELLO CODA</div>
+          <div class="knob-sublabel">Volume Sub</div>
+          <div class="knob-graphic">
+            <svg class="knob-arc" viewBox="0 0 50 50">
+              <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+              <circle class="knob-arc-fill fill-amber" cx="25" cy="25" r="20"></circle>
+            </svg>
+            <div class="knob-dial"><div class="knob-pointer pointer-amber"></div></div>
+          </div>
+          <div class="knob-value">1.00x</div>
+        </div>
+
+        <div class="rotary-knob" data-param="bass_startOffset" data-min="-0.03" data-max="0.12" data-step="0.002" data-default="0.00" data-unit="s">
+          <div class="knob-label">TIMING PARTENZA BASSO</div>
+          <div class="knob-sublabel">Anticipo / Ritardo vs Kick</div>
+          <div class="knob-graphic">
+            <svg class="knob-arc" viewBox="0 0 50 50">
+              <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+              <circle class="knob-arc-fill fill-purple" cx="25" cy="25" r="20"></circle>
+            </svg>
+            <div class="knob-dial"><div class="knob-pointer pointer-purple"></div></div>
+          </div>
+          <div class="knob-value">0.00s</div>
+        </div>
+
+        <div class="rotary-knob" data-param="bass_decay" data-min="0.04" data-max="0.60" data-step="0.01" data-default="0.18" data-unit="s">
+          <div class="knob-label">DURATA NOTA BASSO</div>
+          <div class="knob-sublabel">Lunghezza Gate Basso</div>
+          <div class="knob-graphic">
+            <svg class="knob-arc" viewBox="0 0 50 50">
+              <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+              <circle class="knob-arc-fill fill-303" cx="25" cy="25" r="20"></circle>
+            </svg>
+            <div class="knob-dial"><div class="knob-pointer pointer-303"></div></div>
+          </div>
+          <div class="knob-value">0.18s</div>
+        </div>
+
+        <div class="rotary-knob" data-param="bass_sidechain" data-min="0" data-max="1" data-step="0.05" data-default="0.85" data-unit="">
+          <div class="knob-label">AGGANCIO DUCKING</div>
+          <div class="knob-sublabel">Respiro sotto Cassa</div>
+          <div class="knob-graphic">
+            <svg class="knob-arc" viewBox="0 0 50 50">
+              <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+              <circle class="knob-arc-fill fill-cyan" cx="25" cy="25" r="20"></circle>
+            </svg>
+            <div class="knob-dial"><div class="knob-pointer pointer-cyan"></div></div>
+          </div>
+          <div class="knob-value">0.85</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================== -->
     <!-- NUOVA SEZIONE DEDICATA: SINTETIZZATORE BASSI (TUTTI I TIPI DI BASSO)   -->
     <!-- ====================================================================== -->
     <section class="bass-synth-master-section">
@@ -592,6 +708,19 @@
               <div class="knob-dial"><div class="knob-pointer pointer-303"></div></div>
             </div>
             <div class="knob-value">0.08s</div>
+          </div>
+
+          <div class="rotary-knob" data-param="bass_startOffset" data-min="-0.03" data-max="0.12" data-step="0.002" data-default="0.00" data-unit="s">
+            <div class="knob-label">TIMING PARTENZA</div>
+            <div class="knob-sublabel">Offset vs Kick (+/- ms)</div>
+            <div class="knob-graphic">
+              <svg class="knob-arc" viewBox="0 0 50 50">
+                <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                <circle class="knob-arc-fill fill-purple" cx="25" cy="25" r="20"></circle>
+              </svg>
+              <div class="knob-dial"><div class="knob-pointer pointer-purple"></div></div>
+            </div>
+            <div class="knob-value">0.00s</div>
           </div>
 
           <div class="rotary-knob" data-param="bass_sidechain" data-min="0" data-max="1" data-step="0.05" data-default="0.85" data-unit="">
@@ -899,6 +1028,19 @@
 
         <div class="module-body">
           <div class="knobs-grid">
+            <div class="rotary-knob" data-param="body_tailStartDelay" data-min="0" data-max="0.12" data-step="0.002" data-default="0.00" data-unit="s">
+              <div class="knob-label">PARTENZA CODA</div>
+              <div class="knob-sublabel">Delay post-punch</div>
+              <div class="knob-graphic">
+                <svg class="knob-arc" viewBox="0 0 50 50">
+                  <circle class="knob-arc-bg" cx="25" cy="25" r="20"></circle>
+                  <circle class="knob-arc-fill fill-cyan" cx="25" cy="25" r="20"></circle>
+                </svg>
+                <div class="knob-dial"><div class="knob-pointer pointer-cyan"></div></div>
+              </div>
+              <div class="knob-value">0.00s</div>
+            </div>
+
             <div class="rotary-knob" data-param="body_tailLevel" data-min="0.05" data-max="1.5" data-step="0.05" data-default="1.0" data-unit="x">
               <div class="knob-label">LIVELLO CODA</div>
               <div class="knob-sublabel">Quanto è forte</div>

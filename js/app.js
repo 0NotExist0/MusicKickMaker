@@ -8,6 +8,7 @@ import { BassPresetManager, BASS_PRESETS, BASS_PRESET_CATEGORIES, DEFAULT_BASS_P
 import { Visualizer } from "./visualizer.js";
 import { StepSequencer } from "./sequencer.js";
 import { UIManager } from "./ui.js";
+import { CurveEditor } from "./curve-editor.js";
 
 const AVAILABLE_NOTES = [
   "C1", "C#1", "D1", "D#1", "E1", "F1", "F#1", "G1", "G#1", "A1", "A#1", "B1",
@@ -37,6 +38,7 @@ class KickForgeApp {
     this.currentBassPresetId = BASS_PRESETS[0].id;
 
     this.visualizer = null;
+    this.curveEditor = null;
     this.sequencer = null;
 
     this.init();
@@ -46,6 +48,34 @@ class KickForgeApp {
     const canvas = document.getElementById("visualizer-canvas");
     this.visualizer = new Visualizer(canvas, null);
     this.visualizer.start();
+
+    const curveCanvas = document.getElementById("curve-editor-canvas");
+    if (curveCanvas) {
+      this.curveEditor = new CurveEditor(curveCanvas, {
+        mode: "kick_tail",
+        onParamChange: (paramName, value) => {
+          if (paramName.startsWith("bass_")) {
+            this.currentBassParams[paramName] = value;
+            this.uiManager.setKnobValue(paramName, value);
+            if (!this.sequencer.isPlaying) {
+              this.audioEngine.triggerBassNote(this.currentBassParams, { note: "C2", active: 1, accent: 1 }, null, 0.25, true);
+            }
+          } else {
+            this.currentKickParams[paramName] = value;
+            this.uiManager.setKnobValue(paramName, value);
+            if (!this.sequencer.isPlaying) {
+              this.debounceKickTrigger();
+            }
+          }
+        },
+        onUserInteracted: () => {
+          if (!this.sequencer.isPlaying) {
+            this.debounceKickTrigger();
+          }
+        }
+      });
+      this.curveEditor.setParams(this.currentKickParams, this.currentBassParams, this.currentBpm);
+    }
 
     this.sequencer = new StepSequencer(this.audioEngine, (step) => {
       this.updateSequencerUI(step);
@@ -57,11 +87,13 @@ class KickForgeApp {
     this.uiManager.initKnobs((paramName, value) => {
       if (paramName.startsWith("bass_")) {
         this.currentBassParams[paramName] = value;
+        if (this.curveEditor) this.curveEditor.setParams(this.currentKickParams, this.currentBassParams, this.currentBpm);
         if (!this.sequencer.isPlaying) {
           this.audioEngine.triggerBassNote(this.currentBassParams, { note: "C2", active: 1, accent: 1 }, null, 0.25, true);
         }
       } else {
         this.currentKickParams[paramName] = value;
+        if (this.curveEditor) this.curveEditor.setParams(this.currentKickParams, this.currentBassParams, this.currentBpm);
         if (!this.sequencer.isPlaying) {
           this.debounceKickTrigger();
         }
@@ -207,6 +239,9 @@ class KickForgeApp {
     });
 
     this.updateKickControlsFromParams();
+    if (this.curveEditor) {
+      this.curveEditor.setParams(this.currentKickParams, this.currentBassParams, this.currentBpm);
+    }
 
     const presetSelect = document.getElementById("preset-select");
     if (presetSelect) presetSelect.value = presetId;
@@ -294,6 +329,9 @@ class KickForgeApp {
       this.uiManager.setKnobValue(param, this.currentKickParams[param]);
     });
     this.updateKickControlsFromParams();
+    if (this.curveEditor) {
+      this.curveEditor.setParams(this.currentKickParams, this.currentBassParams, this.currentBpm);
+    }
 
     if (description) {
       const descEl = document.getElementById("preset-description");
@@ -371,6 +409,10 @@ class KickForgeApp {
     if (wave2) wave2.checked = true;
     const toggleBass = document.getElementById("toggle-bass-module");
     if (toggleBass) toggleBass.checked = !!this.currentBassParams.bass_enabled;
+
+    if (this.curveEditor) {
+      this.curveEditor.setParams(this.currentKickParams, this.currentBassParams, this.currentBpm);
+    }
 
     if (!this.sequencer.isPlaying) {
       this.audioEngine.triggerBassNote(this.currentBassParams, { note: "C2", active: 1, accent: 1 }, null, 0.25, true);
@@ -777,6 +819,10 @@ class KickForgeApp {
     const presetSelect = document.getElementById("bass-preset-select");
     if (presetSelect) presetSelect.value = presetId;
 
+    if (this.curveEditor) {
+      this.curveEditor.setParams(this.currentKickParams, this.currentBassParams, this.currentBpm);
+    }
+
     this.uiManager.showToast(`Basso caricato: ${preset.name}`, "info");
   }
 
@@ -1086,6 +1132,27 @@ class KickForgeApp {
         this.visualizer.setMode(mode);
         document.querySelectorAll(".vis-mode-btn").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
+      });
+    });
+
+    // Curve Editor Mode Tabs
+    document.querySelectorAll(".curve-tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const mode = btn.dataset.curveMode;
+        if (this.curveEditor) this.curveEditor.setMode(mode);
+        document.querySelectorAll(".curve-tab-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+      });
+    });
+
+    // Curve Editor Preset Chips
+    document.querySelectorAll(".curve-preset-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const preset = chip.dataset.curvePreset;
+        if (this.curveEditor) {
+          this.curveEditor.applyCurvePreset(preset);
+          this.uiManager.showToast(`Curva applicata: ${chip.textContent.trim()}`, "info");
+        }
       });
     });
 
