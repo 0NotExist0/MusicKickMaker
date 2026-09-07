@@ -1,7 +1,8 @@
 /**
  * MelodyForge Studio - Main Application Controller
  * Coordina l'interfaccia utente, il sintetizzatore Web Audio, il Piano Roll,
- * il sequencer con scheduling ad alta precisione, l'intonazione e l'esportazione.
+ * il sequencer con scheduling ad alta precisione, l'AI per generare/variare melodie
+ * e l'evoluzione armonica continua intonata alla musica precedente.
  */
 
 import { CHROMATIC_NOTES, SCALES, isNoteInScale, KICK_TUNING_PRESETS, detectNoteFromFrequency, midiToFreq, noteNameToMidi } from "./scales.js";
@@ -9,10 +10,13 @@ import { INSTRUMENT_PRESETS, MELODY_TEMPLATES } from "./instruments.js";
 import { MelodySynthEngine } from "./synth-engine.js";
 import { PianoRoll } from "./piano-roll.js";
 import { MidiExporter } from "./midi-export.js";
+import { MelodyAIEngine } from "./melody-ai.js";
 
 class MelodyApp {
   constructor() {
     this.synth = new MelodySynthEngine();
+    this.aiEngine = new MelodyAIEngine();
+
     this.bpm = 150;
     this.numSteps = 16;
     this.rootNote = "F";
@@ -26,6 +30,11 @@ class MelodyApp {
     this.nextStepTime = 0.0;
     this.timerId = null;
 
+    // Modalità AUTO: cambia/evolve la melodia da sola ogni N battute (intonata)
+    this.autoEvolveActive = false;
+    this.autoEvolveInterval = 4; // battute
+    this.autoBarCount = 0;
+
     // Metronomo & Kick Reference
     this.metronomeActive = false;
     this.kickReferenceActive = true;
@@ -36,6 +45,7 @@ class MelodyApp {
     this.initInstruments();
     this.initScalesUI();
     this.initControls();
+    this.initAI();
     this.initVirtualKeyboard();
     this.loadKickForgeSession();
 
@@ -56,6 +66,20 @@ class MelodyApp {
     this.kickRefVol = document.getElementById("kick-ref-vol");
     this.toastContainer = document.getElementById("toast-container");
     this.stepsSelector = document.getElementById("steps-selector");
+
+    // AI & Evoluzione Elementi
+    this.aiPromptInput = document.getElementById("melody-ai-prompt-input");
+    this.aiGenerateBtn = document.getElementById("melody-ai-generate-btn");
+    this.aiModifyBtn = document.getElementById("melody-ai-modify-btn");
+    this.aiStatusEl = document.getElementById("melody-ai-status");
+    this.cambiaMelodiaBtn = document.getElementById("cambia-melodia-btn");
+    this.keepTunedPrevToggle = document.getElementById("keep-tuned-prev-toggle");
+    this.autoMelodyToggleBtn = document.getElementById("auto-melody-toggle-btn");
+    this.autoMelodyIntervalSelect = document.getElementById("auto-melody-interval");
+    this.cambiaNoteBtn = document.getElementById("cambia-note-btn");
+    this.cambiaRitmoBtn = document.getElementById("cambia-ritmo-btn");
+    this.undoMelodyBtn = document.getElementById("undo-melody-btn");
+    this.rememberMelodyBtn = document.getElementById("remember-melody-btn");
   }
 
   initPianoRoll() {
@@ -65,7 +89,7 @@ class MelodyApp {
       synthEngine: this.synth,
       numSteps: this.numSteps,
       onNotesChange: (notes) => {
-        // Callback se necessario per salvare o aggiornare statistiche
+        // Callback se necessario
       }
     });
     this.pianoRoll.setTuning(this.rootNote, this.scaleId);
@@ -101,6 +125,8 @@ class MelodyApp {
     // Aggiorna descrizione
     const descEl = document.getElementById("instrument-description");
     if (descEl) descEl.textContent = preset.description;
+
+    if (this.instrumentSelect) this.instrumentSelect.value = presetId;
   }
 
   initScalesUI() {
@@ -193,7 +219,6 @@ class MelodyApp {
 
   detectAndSyncWithKickForge() {
     try {
-      // Prova a leggere l'ultimo preset o la coda della cassa memorizzata
       const customPresets = JSON.parse(localStorage.getItem("kickforge_custom_presets_v2") || "[]");
       if (customPresets.length > 0) {
         const latest = customPresets[customPresets.length - 1];
@@ -210,7 +235,6 @@ class MelodyApp {
       }
     } catch (e) {}
 
-    // Fallback intuitivo: chiedi o applica la nota più potente per il genere (Fa / F)
     this.rootNote = "F";
     if (this.rootSelect) this.rootSelect.value = "F";
     this.pianoRoll.setTuning(this.rootNote, this.scaleId);
@@ -293,7 +317,7 @@ class MelodyApp {
       });
     }
 
-    // Template Generator Dropdown/Buttons
+    // Template Generator Dropdown
     const templateSelect = document.getElementById("melody-template-select");
     if (templateSelect) {
       templateSelect.addEventListener("change", (e) => {
@@ -346,6 +370,225 @@ class MelodyApp {
     this.bindDspSliders();
   }
 
+  /**
+   * Inizializzazione controlli AI e pulsante "CAMBIA MELODIA (Evolvi)"
+   */
+  initAI() {
+    // 1. Tasto Cambia Melodia
+    if (this.cambiaMelodiaBtn) {
+      this.cambiaMelodiaBtn.addEventListener("click", () => this.evolveMelody(false));
+    }
+
+    // 2. Modalità AUTO Melodia (cambia da sola ogni N battute)
+    if (this.autoMelodyToggleBtn) {
+      this.autoMelodyToggleBtn.addEventListener("click", () => {
+        this.autoEvolveActive = !this.autoEvolveActive;
+        this.autoBarCount = 0;
+        this.autoMelodyToggleBtn.textContent = this.autoEvolveActive ? "🔄 AUTO: ON" : "🔄 AUTO: OFF";
+        this.autoMelodyToggleBtn.classList.toggle("auto-btn-active", this.autoEvolveActive);
+        this.showToast(this.autoEvolveActive ? `🔄 AUTO Melodia ATTIVO: cambierà ogni ${this.autoEvolveInterval} battute` : "🔄 AUTO Melodia DISATTIVATO", "info");
+      });
+    }
+
+    if (this.autoMelodyIntervalSelect) {
+      this.autoMelodyIntervalSelect.addEventListener("change", (e) => {
+        this.autoEvolveInterval = parseInt(e.target.value, 10);
+      });
+    }
+
+    // 3. Variazioni rapide: Cambia Note e Cambia Ritmo
+    if (this.cambiaNoteBtn) {
+      this.cambiaNoteBtn.addEventListener("click", () => this.variatePitches());
+    }
+    if (this.cambiaRitmoBtn) {
+      this.cambiaRitmoBtn.addEventListener("click", () => this.variateRhythm());
+    }
+
+    // 4. Undo Cronologia e Memorizzazione
+    if (this.undoMelodyBtn) {
+      this.undoMelodyBtn.addEventListener("click", () => this.handleUndo());
+    }
+    if (this.rememberMelodyBtn) {
+      this.rememberMelodyBtn.addEventListener("click", () => this.handleRemember());
+    }
+
+    // 5. Prompt AI Text Generator
+    if (this.aiGenerateBtn) {
+      this.aiGenerateBtn.addEventListener("click", () => this.handleAIGenerate(false));
+    }
+    if (this.aiModifyBtn) {
+      this.aiModifyBtn.addEventListener("click", () => this.handleAIGenerate(true));
+    }
+    if (this.aiPromptInput) {
+      this.aiPromptInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          this.handleAIGenerate(false);
+        }
+      });
+    }
+
+    // 6. Chip di suggerimento rapido AI
+    document.querySelectorAll("[data-ai-prompt]").forEach(chip => {
+      chip.addEventListener("click", (e) => {
+        const text = e.currentTarget.dataset.aiPrompt;
+        if (this.aiPromptInput) this.aiPromptInput.value = text;
+        this.handleAIGenerate(false);
+      });
+    });
+  }
+
+  /**
+   * Cambia ed evolve la melodia.
+   * Se la casella "Intonata alla precedente" è spuntata, crea un'evoluzione armonica
+   * legata alla frase precedente; altrimenti genera una melodia completamente nuova.
+   */
+  evolveMelody(silent = false) {
+    const currentNotes = this.pianoRoll.getNotesArray();
+    const keepTuned = this.keepTunedPrevToggle ? this.keepTunedPrevToggle.checked : true;
+
+    // Salva nella cronologia prima dell'evoluzione
+    this.aiEngine.pushHistory(currentNotes, {
+      rootNote: this.rootNote,
+      scaleId: this.scaleId,
+      bpm: this.bpm
+    });
+
+    const result = this.aiEngine.evolveMelody(
+      currentNotes,
+      this.rootNote,
+      this.scaleId,
+      keepTuned,
+      this.numSteps
+    );
+
+    this.pianoRoll.setNotesArray(result.notes);
+
+    if (!silent) {
+      if (keepTuned) {
+        this.showToast(`🔄 Nuova melodia generata intonata a quella precedente! (${result.type.replace(/_/g, " ")})`, "success");
+      } else {
+        this.showToast(`🎲 Nuova melodia indipendente generata in tonalità!`, "info");
+      }
+    } else {
+      this.showToast(`🔄 AUTO: Melodia cambiata (${result.type.replace(/_/g, " ")})`, "info");
+    }
+  }
+
+  /**
+   * Varia solo le altezze delle note in scala mantenendo la scansione ritmica
+   */
+  variatePitches() {
+    const currentNotes = this.pianoRoll.getNotesArray();
+    if (currentNotes.length === 0) return;
+    this.aiEngine.pushHistory(currentNotes);
+    const newNotes = this.aiEngine.variatePitchesOnly(currentNotes, this.rootNote, this.scaleId);
+    this.pianoRoll.setNotesArray(newNotes);
+    this.showToast("🎲 Note variate in tonalità (ritmo invariato)", "info");
+  }
+
+  /**
+   * Varia solo il ritmo e le sincopi mantenendo le stesse note intonate
+   */
+  variateRhythm() {
+    const currentNotes = this.pianoRoll.getNotesArray();
+    if (currentNotes.length === 0) return;
+    this.aiEngine.pushHistory(currentNotes);
+    const newNotes = this.aiEngine.variateRhythmOnly(currentNotes, this.numSteps);
+    this.pianoRoll.setNotesArray(newNotes);
+    this.showToast("🥁 Ritmo melodico variato e sincopato", "info");
+  }
+
+  /**
+   * Torna indietro alla melodia precedente
+   */
+  handleUndo() {
+    const prev = this.aiEngine.undo();
+    if (prev) {
+      this.pianoRoll.setNotesArray(prev.notes);
+      this.showToast("⏪ Ripristinata melodia precedente", "info");
+    } else {
+      this.showToast("ℹ️ Nessuna melodia precedente nella cronologia", "warning");
+    }
+  }
+
+  /**
+   * Fissa la melodia corrente in memoria
+   */
+  handleRemember() {
+    const currentNotes = this.pianoRoll.getNotesArray();
+    this.aiEngine.pinnedMelody = JSON.parse(JSON.stringify(currentNotes));
+    this.showToast("💾 Melodia memorizzata! L'AI la userà come base di riferimento.", "success");
+  }
+
+  /**
+   * Gestione generazione o modifica della melodia con AI
+   */
+  async handleAIGenerate(tweak = false) {
+    const prompt = this.aiPromptInput ? this.aiPromptInput.value.trim() : "";
+    if (!prompt) {
+      this.showToast("Inserisci prima un'idea o stile nel campo testo!", "warning");
+      if (this.aiPromptInput) this.aiPromptInput.focus();
+      return;
+    }
+
+    if (this.aiStatusEl) {
+      this.aiStatusEl.style.display = "block";
+      this.aiStatusEl.textContent = `🤖 L'AI sta componendo la melodia per "${prompt}"...`;
+    }
+
+    const currentNotes = this.pianoRoll.getNotesArray();
+    this.aiEngine.pushHistory(currentNotes);
+
+    // Piccolo delay per dare sensazione di elaborazione AI
+    await new Promise(r => setTimeout(r, 200));
+
+    try {
+      const result = this.aiEngine.generateFromPrompt(
+        prompt,
+        this.rootNote,
+        this.scaleId,
+        this.numSteps
+      );
+
+      // Aggiorna Tonalità se rilevata
+      if (result.rootNote && result.rootNote !== this.rootNote) {
+        this.rootNote = result.rootNote;
+        if (this.rootSelect) this.rootSelect.value = result.rootNote;
+      }
+      if (result.scaleId && result.scaleId !== this.scaleId) {
+        this.scaleId = result.scaleId;
+        if (this.scaleSelect) this.scaleSelect.value = result.scaleId;
+      }
+      this.pianoRoll.setTuning(this.rootNote, this.scaleId);
+      this.updateHarmonicBadge();
+
+      // Aggiorna Strumento se suggerito
+      if (result.instrumentId) {
+        this.applyInstrumentPreset(result.instrumentId);
+      }
+
+      // Aggiorna BPM se specificato
+      if (result.bpm) {
+        this.setBPM(result.bpm);
+      }
+
+      // Applica le note
+      this.pianoRoll.setNotesArray(result.notes);
+
+      if (this.aiStatusEl) {
+        this.aiStatusEl.textContent = `✅ ${result.name} generata con successo in ${this.rootNote} ${SCALES[this.scaleId]?.name}!`;
+      }
+      this.showToast(`✨ ${result.name} pronta!`, "success");
+    } catch (err) {
+      console.error("AI Error:", err);
+      if (this.aiStatusEl) {
+        this.aiStatusEl.textContent = `⚠️ Errore di generazione: ${err.message}`;
+      }
+      this.showToast("Operazione AI non riuscita.", "warning");
+    }
+  }
+
   setBPM(bpm) {
     this.bpm = Math.max(60, Math.min(240, bpm));
     if (this.bpmInput) this.bpmInput.value = this.bpm;
@@ -354,7 +597,6 @@ class MelodyApp {
 
   bindDspSliders() {
     const sliderIds = [
-      // OSC
       { id: "osc1-wave", param: "osc1_wave", type: "val" },
       { id: "osc1-octave", param: "osc1_octave", type: "int" },
       { id: "osc1-detune", param: "osc1_detune", type: "float" },
@@ -365,26 +607,21 @@ class MelodyApp {
       { id: "unison-detune", param: "unison_detune", type: "float" },
       { id: "sub-level", param: "sub_level", type: "float" },
       { id: "noise-level", param: "noise_level", type: "float" },
-      // VCF
       { id: "filter-type", param: "filter_type", type: "val" },
       { id: "filter-cutoff", param: "filter_cutoff", type: "float" },
       { id: "filter-resonance", param: "filter_resonance", type: "float" },
       { id: "filter-env-amt", param: "filter_env_amount", type: "float" },
-      // AMP ADSR
       { id: "amp-attack", param: "amp_attack", type: "float" },
       { id: "amp-decay", param: "amp_decay", type: "float" },
       { id: "amp-sustain", param: "amp_sustain", type: "float" },
       { id: "amp-release", param: "amp_release", type: "float" },
-      // FILTER ADSR
       { id: "filt-attack", param: "filter_attack", type: "float" },
       { id: "filt-decay", param: "filter_decay", type: "float" },
       { id: "filt-sustain", param: "filter_sustain", type: "float" },
       { id: "filt-release", param: "filter_release", type: "float" },
-      // LFO
       { id: "lfo-target", param: "lfo_target", type: "val" },
       { id: "lfo-rate", param: "lfo_rate", type: "float" },
       { id: "lfo-depth", param: "lfo_depth", type: "float" },
-      // FX
       { id: "dist-drive", param: "dist_drive", type: "float" },
       { id: "chorus-mix", param: "chorus_mix", type: "float" },
       { id: "delay-time", param: "delay_time", type: "float" },
@@ -443,7 +680,6 @@ class MelodyApp {
     if (!container) return;
 
     container.innerHTML = "";
-    // Visualizza 2 ottave da C4 (60) a B5 (83)
     const keyMap = {
       "KeyA": 60, "KeyW": 61, "KeyS": 62, "KeyE": 63, "KeyD": 64,
       "KeyF": 65, "KeyT": 66, "KeyG": 67, "KeyY": 68, "KeyH": 69, "KeyU": 70, "KeyJ": 71, "KeyK": 72
@@ -479,7 +715,6 @@ class MelodyApp {
     }
     container.appendChild(keysWrapper);
 
-    // Gestione tastiera fisica del computer
     window.addEventListener("keydown", (e) => {
       if (e.repeat || e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
       if (keyMap[e.code]) {
@@ -519,6 +754,7 @@ class MelodyApp {
       this.playBtn.classList.add("btn-active-glow");
     }
     this.currentStep = 0;
+    this.autoBarCount = 0;
     this.nextStepTime = this.synth.ctx.currentTime + 0.05;
     this.scheduler();
   }
@@ -548,21 +784,28 @@ class MelodyApp {
     const secondsPer16th = 60.0 / (this.bpm * 4);
     this.nextStepTime += secondsPer16th;
     this.currentStep = (this.currentStep + 1) % this.numSteps;
+
+    // Se completata una battuta (ritorno allo step 0), gestisci l'AUTO evolve
+    if (this.currentStep === 0) {
+      this.autoBarCount++;
+      if (this.autoEvolveActive && (this.autoBarCount % this.autoEvolveInterval === 0)) {
+        this.evolveMelody(true);
+      }
+    }
   }
 
   scheduleStep(step, time) {
-    // 1. Aggiorna indicatore visuale in sync con il rendering visivo
     const delayMs = Math.max(0, (time - this.synth.ctx.currentTime) * 1000);
     setTimeout(() => {
       if (this.isPlaying) this.pianoRoll.setPlayhead(step);
     }, delayMs);
 
-    // 2. Esegui Cassa di Riferimento se abilitata (ogni battere di 1/4: step 0, 4, 8, 12...)
+    // Esegui Cassa di Riferimento se abilitata (ogni quarto: step 0, 4, 8, 12...)
     if (step % 4 === 0) {
       this.synth.triggerReferenceKick(time, this.rootNote);
     }
 
-    // 3. Esegui tutte le note del synth posizionate su questo step
+    // Esegui note synth sullo step
     const notes = this.pianoRoll.getNotesArray().filter(n => n.step === step && n.active);
     const secondsPer16th = 60.0 / (this.bpm * 4);
 
@@ -588,12 +831,9 @@ class MelodyApp {
     const rootIndex = CHROMATIC_NOTES.indexOf(this.rootNote);
     const scaleSemitones = scale.intervals;
 
-    // Genera note
     const degrees = tmpl.generate(this.rootNote, this.scaleId, this.numSteps);
     const newNotes = [];
-
-    // Ottava base (4 o 5)
-    const baseMidi = 60 + rootIndex; // C4 + root offset
+    const baseMidi = 60 + rootIndex;
 
     degrees.forEach((deg, step) => {
       if (deg === null || deg === undefined) return;
@@ -615,9 +855,6 @@ class MelodyApp {
     this.showToast(`✨ Caricato pattern: ${tmpl.name}`, "success");
   }
 
-  /**
-   * Generatore algoritmico casuale sempre intonato sulla scala attiva
-   */
   generateRandomMelodyInScale() {
     const scale = SCALES[this.scaleId] || SCALES.minor_natural;
     const rootIndex = CHROMATIC_NOTES.indexOf(this.rootNote);
@@ -626,7 +863,6 @@ class MelodyApp {
 
     const newNotes = [];
     for (let s = 0; s < this.numSteps; s++) {
-      // 70% di probabilità di avere una nota sullo step
       if (Math.random() < 0.72) {
         const randInterval = intervals[Math.floor(Math.random() * intervals.length)];
         const randOctave = Math.random() < 0.3 ? 12 : 0;
@@ -645,9 +881,6 @@ class MelodyApp {
     this.showToast(`🎲 Nuova melodia generata su ${this.rootNote} ${scale.name}!`, "success");
   }
 
-  /**
-   * Esportazione del file audio WAV ad alta definizione
-   */
   async handleExportWav() {
     const notes = this.pianoRoll.getNotesArray();
     if (notes.length === 0) {
@@ -675,9 +908,6 @@ class MelodyApp {
     }
   }
 
-  /**
-   * Esportazione del file standard MIDI (.MID) per DAW
-   */
   handleExportMidi() {
     const notes = this.pianoRoll.getNotesArray();
     if (notes.length === 0) {

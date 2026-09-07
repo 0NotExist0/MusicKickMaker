@@ -109,6 +109,48 @@
     </section>
 
     <!-- ============================================== -->
+    <!-- GENERATORE MELODIA CON AI                      -->
+    <!-- ============================================== -->
+    <section class="ai-generator-card">
+      <div class="ai-gen-header">
+        <div class="card-title-group">
+          <span class="ai-badge">🤖 AI MELODIA</span>
+          <div>
+            <h2 class="section-title">GENERA O MODIFICA LA MELODIA DAL TESTO</h2>
+            <p class="section-sub">Descrivi stile, genere o emozione: l'AI compone note, armonia e strumento intonati ai tuoi kick</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ai-gen-body">
+        <div class="ai-input-row">
+          <input type="text" id="melody-ai-prompt-input" class="ai-prompt-input"
+                 placeholder="Es: 'inno hardstyle euforico e trionfale', 'riff acid 303 dark techno', 'arpeggio trance progressive', 'melodia romantica con pianoforte'..."
+                 maxlength="600" autocomplete="off">
+          <button id="melody-ai-generate-btn" class="btn btn-primary btn-glow ai-gen-btn" title="Genera una nuova melodia dal testo">
+            <span class="btn-icon">✨</span> Genera con AI
+          </button>
+          <button id="melody-ai-modify-btn" class="btn btn-secondary ai-gen-btn" title="Modifica e varia la melodia attuale in base al testo">
+            <span class="btn-icon">✏️</span> Varia con AI
+          </button>
+        </div>
+
+        <div class="ai-suggestions-row">
+          <span class="ai-sugg-label">Idee Rapide:</span>
+          <button class="ai-chip" data-ai-prompt="inno hardstyle euforico e trionfale">🏆 Inno Hardstyle</button>
+          <button class="ai-chip" data-ai-prompt="riff acid 303 dark techno ipnotico">🧪 Acid 303 Riff</button>
+          <button class="ai-chip" data-ai-prompt="arpeggio trance melodico emozionale">🌌 Trance Melodico</button>
+          <button class="ai-chip" data-ai-prompt="riff dark techno industriale aggressivo">⚡ Dark Techno</button>
+          <button class="ai-chip" data-ai-prompt="melodia pianoforte neoclassica dolce ed epica">🎹 Grand Piano</button>
+          <button class="ai-chip" data-ai-prompt="arpeggio cyberpunk synthwave 80s">🌆 Synthwave 80s</button>
+          <button class="ai-chip" data-ai-prompt="melodia chiptune 8-bit arcade gameboy">👾 8-Bit Arcade</button>
+        </div>
+
+        <div id="melody-ai-status" class="ai-status-msg" style="display:none;"></div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
     <!-- RACK STRUMENTO & SOUND DESIGN (DSP)            -->
     <!-- ============================================== -->
     <section class="synth-rack-card">
@@ -436,6 +478,40 @@
           <button id="clear-melody-btn" class="btn btn-secondary" title="Cancella tutte le note">
             🗑️ Svuota
           </button>
+        </div>
+      </div>
+
+      <!-- ============================================== -->
+      <!-- BARRA CAMBIA & EVOLVI MELODIA (INTONATA / AUTO) -->
+      <!-- ============================================== -->
+      <div class="melody-evolve-toolbar">
+        <div class="evolve-main-group">
+          <button id="cambia-melodia-btn" class="btn btn-primary btn-glow btn-cambia-melodia" title="Genera un'altra melodia (intonata alla precedente se la casella è spuntata)">
+            <span class="btn-icon">🔄</span> CAMBIA MELODIA
+          </button>
+
+          <label class="toggle-label tuned-prev-label" title="Se spuntato: genera una melodia intonata e armonicamente collegata alla precedente. Se deselezionato: genera una melodia completamente nuova.">
+            <input type="checkbox" id="keep-tuned-prev-toggle" class="toggle-checkbox" checked>
+            <span>🔗 Intonata alla melodia precedente</span>
+          </label>
+        </div>
+
+        <div class="evolve-auto-group" title="Cambia automaticamente la melodia ogni N battute mentre il loop suona">
+          <button id="auto-melody-toggle-btn" class="btn btn-mini auto-btn">🔄 AUTO: OFF</button>
+          <label class="auto-interval-label">ogni
+            <select id="auto-melody-interval" class="auto-interval-select">
+              <option value="2">2</option>
+              <option value="4" selected>4</option>
+              <option value="8">8</option>
+            </select> battute
+          </label>
+        </div>
+
+        <div class="evolve-quick-group">
+          <button id="cambia-note-btn" class="btn btn-mini btn-secondary" title="Varia le altezze delle note in scala mantenendo il ritmo attuale">🎲 Cambia Note</button>
+          <button id="cambia-ritmo-btn" class="btn btn-mini btn-secondary" title="Varia il ritmo e le sincopi mantenendo le stesse note intonate">🥁 Cambia Ritmo</button>
+          <button id="undo-melody-btn" class="btn btn-mini btn-secondary" title="Torna alla melodia precedente nella cronologia">⏪ Precedente</button>
+          <button id="remember-melody-btn" class="btn btn-mini btn-secondary" title="Fissa questa melodia come punto di partenza per l'evoluzione">💾 Ricorda</button>
         </div>
       </div>
 
