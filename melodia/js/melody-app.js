@@ -12,6 +12,46 @@ import { PianoRoll } from "./piano-roll.js";
 import { MidiExporter } from "./midi-export.js";
 import { MelodyAIEngine } from "./melody-ai.js";
 
+export const DSP_PARAM_MAPPINGS = [
+  { id: "osc1-wave", param: "osc1_wave", type: "val" },
+  { id: "osc1-octave", param: "osc1_octave", type: "int" },
+  { id: "osc1-detune", param: "osc1_detune", type: "float" },
+  { id: "osc2-wave", param: "osc2_wave", type: "val" },
+  { id: "osc2-octave", param: "osc2_octave", type: "int" },
+  { id: "osc2-detune", param: "osc2_detune", type: "float" },
+  { id: "unison-voices", param: "unison_voices", type: "int" },
+  { id: "unison-detune", param: "unison_detune", type: "float" },
+  { id: "sub-level", param: "sub_level", type: "float" },
+  { id: "noise-level", param: "noise_level", type: "float" },
+  { id: "filter-type", param: "filter_type", type: "val" },
+  { id: "filter-cutoff", param: "filter_cutoff", type: "float" },
+  { id: "filter-resonance", param: "filter_resonance", type: "float" },
+  { id: "filter-env-amt", param: "filter_env_amount", type: "float" },
+  { id: "amp-attack", param: "amp_attack", type: "float" },
+  { id: "amp-decay", param: "amp_decay", type: "float" },
+  { id: "amp-sustain", param: "amp_sustain", type: "float" },
+  { id: "amp-release", param: "amp_release", type: "float" },
+  { id: "filt-attack", param: "filter_attack", type: "float" },
+  { id: "filt-decay", param: "filter_decay", type: "float" },
+  { id: "filt-sustain", param: "filter_sustain", type: "float" },
+  { id: "filt-release", param: "filter_release", type: "float" },
+  { id: "lfo-target", param: "lfo_target", type: "val" },
+  { id: "lfo-rate", param: "lfo_rate", type: "float" },
+  { id: "lfo-depth", param: "lfo_depth", type: "float" },
+  { id: "dist-drive", param: "dist_drive", type: "float" },
+  { id: "chorus-mix", param: "chorus_mix", type: "float" },
+  { id: "delay-time", param: "delay_time", type: "float" },
+  { id: "delay-feedback", param: "delay_feedback", type: "float" },
+  { id: "delay-mix", param: "delay_mix", type: "float" },
+  { id: "reverb-decay", param: "reverb_decay", type: "float" },
+  { id: "reverb-mix", param: "reverb_mix", type: "float" },
+  { id: "eq-low", param: "eq_low", type: "float" },
+  { id: "eq-mid", param: "eq_mid", type: "float" },
+  { id: "eq-high", param: "eq_high", type: "float" },
+  { id: "glide-time", param: "glide", type: "float" },
+  { id: "master-volume", param: "master_volume", type: "float" }
+];
+
 class MelodyApp {
   constructor() {
     this.synth = new MelodySynthEngine();
@@ -118,11 +158,11 @@ class MelodyApp {
     this.applyInstrumentPreset(INSTRUMENT_PRESETS[0].id);
   }
 
-  applyInstrumentPreset(presetId) {
+  async applyInstrumentPreset(presetId, preview = false) {
     const preset = INSTRUMENT_PRESETS.find(p => p.id === presetId);
     if (!preset) return;
 
-    this.synth.params = { ...this.synth.params, ...preset.params };
+    this.synth.applyAllParams(preset.params);
     this.updateKnobsUI();
     this.showToast(`🎸 Caricato strumento: ${preset.name}`, "info");
 
@@ -131,6 +171,35 @@ class MelodyApp {
     if (descEl) descEl.textContent = preset.description;
 
     if (this.instrumentSelect) this.instrumentSelect.value = presetId;
+
+    if (preview) {
+      await this.synth.initAudio();
+      this.auditionMelody();
+    }
+  }
+
+  /**
+   * Esegue un breve riff di anteprima per far sentire subito il nuovo timbro o le note
+   */
+  async auditionMelody() {
+    await this.synth.initAudio();
+    if (!this.synth.ctx || this.isPlaying) return;
+
+    const notes = this.pianoRoll.getNotesArray().filter(n => n.active);
+    const scale = SCALES[this.scaleId] || SCALES.minor_natural;
+    const rootIndex = CHROMATIC_NOTES.indexOf(this.rootNote);
+    const baseMidi = 60 + rootIndex;
+
+    const previewMidis = notes.length >= 2
+      ? [notes[0].midi, notes[1].midi, (notes[2] ? notes[2].midi : notes[0].midi)]
+      : [baseMidi, baseMidi + (scale.intervals[2] || 4), baseMidi + (scale.intervals[4] || 7)];
+
+    const now = this.synth.ctx.currentTime + 0.02;
+    const stepDuration = 0.16;
+
+    previewMidis.forEach((midi, idx) => {
+      this.synth.triggerNote(midi, 0.22, 0.88, now + idx * stepDuration);
+    });
   }
 
   initScalesUI() {
@@ -452,7 +521,8 @@ class MelodyApp {
     document.getElementById("var-suono-cassa-btn")?.addEventListener("click", () => this.variateKickSound());
 
     // RITMO (pattern)
-    document.getElementById("var-ritmo-melodia-btn")?.addEventListener("click", () => this.variatePitches());
+    document.getElementById("var-ritmo-melodia-btn")?.addEventListener("click", () => this.variateRhythm());
+    document.getElementById("var-cambia-note-btn")?.addEventListener("click", () => this.variatePitches());
     document.getElementById("var-ritmo-cassa-btn")?.addEventListener("click", () => this.cycleKickRhythm());
     document.getElementById("var-arpeggio-btn")?.addEventListener("click", () => this.transformToArpeggio());
     document.getElementById("var-evolvi-btn")?.addEventListener("click", () => this.evolveMelody(false));
@@ -461,72 +531,97 @@ class MelodyApp {
   /**
    * Variazione del timbro del sintetizzatore (filtri ed effetti FX)
    */
-  variateSynthSound() {
+  async variateSynthSound() {
+    await this.synth.initAudio();
     const p = this.synth.params;
-    const cutoffMult = [0.7, 0.82, 1.22, 1.45, 1.65][Math.floor(Math.random() * 5)];
-    p.filter_cutoff = Math.max(300, Math.min(12000, Math.round(p.filter_cutoff * cutoffMult)));
-    p.filter_resonance = Math.max(1.0, Math.min(14.0, +(p.filter_resonance * (0.7 + Math.random() * 0.7)).toFixed(1)));
+
+    const cutoffMult = [0.65, 0.8, 1.25, 1.5, 1.85][Math.floor(Math.random() * 5)];
+    p.filter_cutoff = Math.max(400, Math.min(13500, Math.round(p.filter_cutoff * cutoffMult)));
+    p.filter_resonance = Math.max(1.0, Math.min(15.0, +(p.filter_resonance * (0.65 + Math.random() * 0.7)).toFixed(1)));
+    p.filter_env_amount = Math.max(500, Math.min(7000, Math.round(p.filter_env_amount * (0.7 + Math.random() * 0.6))));
+
+    p.dist_drive = Math.max(0.05, Math.min(0.85, +(p.dist_drive + (Math.random() * 0.3 - 0.15)).toFixed(2)));
+    p.chorus_mix = Math.max(0.05, Math.min(0.75, +(p.chorus_mix + (Math.random() * 0.25 - 0.12)).toFixed(2)));
     p.reverb_mix = Math.max(0.1, Math.min(0.65, +(p.reverb_mix + (Math.random() * 0.2 - 0.1)).toFixed(2)));
     p.delay_mix = Math.max(0.1, Math.min(0.55, +(p.delay_mix + (Math.random() * 0.2 - 0.1)).toFixed(2)));
-    p.dist_drive = Math.max(0.05, Math.min(0.7, +(p.dist_drive + (Math.random() * 0.2 - 0.1)).toFixed(2)));
+    p.unison_detune = Math.max(5, Math.min(35, Math.round(p.unison_detune * (0.8 + Math.random() * 0.4))));
 
-    this.synth.updateDistortionCurve(p.dist_drive);
-    if (this.synth.reverbGain && this.synth.ctx) {
-      this.synth.reverbGain.gain.setValueAtTime(p.reverb_mix, this.synth.ctx.currentTime);
+    if (Math.random() < 0.35) {
+      const waves = ["sawtooth", "square", "triangle"];
+      p.osc1_wave = waves[Math.floor(Math.random() * waves.length)];
     }
-    if (this.synth.delayGain && this.synth.ctx) {
-      this.synth.delayGain.gain.setValueAtTime(p.delay_mix, this.synth.ctx.currentTime);
-    }
+
+    this.synth.applyAllParams(p);
     this.updateKnobsUI();
-    this.showToast(`🎛️ Suono melodia variato (Cutoff: ${p.filter_cutoff}Hz, Res: ${p.filter_resonance})`, "info");
+    this.showToast(`🎛️ Suono melodia variato (Cutoff: ${p.filter_cutoff}Hz, Res: ${p.filter_resonance}, Drive: ${p.dist_drive})`, "info");
+
+    if (!this.isPlaying) {
+      this.auditionMelody();
+    }
   }
 
   /**
    * Cambia strumento pescando a sorpresa tra i 12 preset di modelli disponibili
    */
-  cycleRandomInstrument() {
+  async cycleRandomInstrument() {
+    await this.synth.initAudio();
     const currentId = this.instrumentSelect?.value;
     const others = INSTRUMENT_PRESETS.filter(p => p.id !== currentId);
     const chosen = others[Math.floor(Math.random() * others.length)] || INSTRUMENT_PRESETS[0];
-    this.applyInstrumentPreset(chosen.id);
+    await this.applyInstrumentPreset(chosen.id, !this.isPlaying);
   }
 
   /**
-   * Varia il timbro della cassa di riferimento intonata (punch / decay / sub)
+   * Varia il timbro della cassa di riferimento intonata (punch / decay / sub / distorsione)
    */
-  variateKickSound() {
-    const kickModes = ["Sub profondo", "Punchy Hardstyle", "Tight Techno", "Distorto Frenchcore"];
+  async variateKickSound() {
+    await this.synth.initAudio();
+    const kickModes = [
+      { id: "techno", name: "Punchy Techno 909", desc: "Attacco incisivo e sub netto" },
+      { id: "hardstyle", name: "Hardstyle Tok Distorto", desc: "Sweep ultra-rapido e cassa cattiva" },
+      { id: "sub", name: "Sub 808 Profondo", desc: "Corpo caldo e risonanza bassa" },
+      { id: "raw", name: "Raw Screech Frenchcore", desc: "Clip transiente e botta da capogiro" }
+    ];
     this.kickSoundIndex = ((this.kickSoundIndex || 0) + 1) % kickModes.length;
-    this.synth.kickVolume = [0.85, 1.0, 0.75, 0.95][this.kickSoundIndex];
-    if (this.synth.kickGain && this.synth.ctx) {
-      this.synth.kickGain.gain.setValueAtTime(this.synth.kickVolume, this.synth.ctx.currentTime);
-    }
-    // Esegui colpo cassa di anteprima
-    if (this.synth.ctx) {
-      this.synth.triggerReferenceKick(this.synth.ctx.currentTime + 0.05, this.rootNote);
-    }
-    this.showToast(`🎛️ Timbro cassa: ${kickModes[this.kickSoundIndex]}`, "info");
+    const mode = kickModes[this.kickSoundIndex];
+    this.synth.kickSoundMode = mode.id;
+
+    // Esegui colpo cassa di anteprima immediato
+    this.synth.triggerReferenceKick(null, this.rootNote, true);
+    this.showToast(`🎛️ Timbro cassa: ${mode.name} (${mode.desc})`, "info");
   }
 
   /**
    * Varia il ritmo della cassa di riferimento (4/4 sul battere, levare offbeat, gallop, ottavi)
    */
-  cycleKickRhythm() {
+  async cycleKickRhythm() {
+    await this.synth.initAudio();
     const rhythms = [
       { name: "4/4 Standard (Battere)", fn: (s) => s % 4 === 0 },
-      { name: "Levare Offbeat (Techno)", fn: (s) => s % 4 === 2 },
-      { name: "Frenchcore Gallop", fn: (s) => s % 4 === 0 || s % 4 === 3 },
+      { name: "Levare Offbeat (Techno / Psy)", fn: (s) => s % 4 === 2 },
+      { name: "Frenchcore Gallop (1 & 4)", fn: (s) => s % 4 === 0 || s % 4 === 3 },
       { name: "Ottavi Incalzanti", fn: (s) => s % 2 === 0 }
     ];
     this.kickRhythmIndex = ((this.kickRhythmIndex || 0) + 1) % rhythms.length;
     this.currentKickRhythmFn = rhythms[this.kickRhythmIndex].fn;
     this.showToast(`🥁 Ritmo cassa: ${rhythms[this.kickRhythmIndex].name}`, "info");
+
+    if (!this.isPlaying) {
+      const now = this.synth.ctx.currentTime + 0.03;
+      const stepDuration = 60.0 / (this.bpm * 4);
+      for (let s = 0; s < 4; s++) {
+        if (this.currentKickRhythmFn(s)) {
+          this.synth.triggerReferenceKick(now + s * stepDuration, this.rootNote, true);
+        }
+      }
+    }
   }
 
   /**
    * Trasforma le note correnti in un arpeggio fluido a sedicesimi
    */
-  transformToArpeggio() {
+  async transformToArpeggio() {
+    await this.synth.initAudio();
     const currentNotes = this.pianoRoll.getNotesArray();
     this.aiEngine.pushHistory(currentNotes);
     const usedMidis = currentNotes.length ? currentNotes.map(n => n.midi) : [];
@@ -552,6 +647,10 @@ class MelodyApp {
     }
     this.pianoRoll.setNotesArray(newNotes);
     this.showToast("✨ Pattern trasformato in arpeggio fluido a sedicesimi!", "success");
+
+    if (!this.isPlaying) {
+      this.auditionMelody();
+    }
   }
 
   /**
@@ -559,8 +658,21 @@ class MelodyApp {
    * Se la casella "Intonata alla precedente" è spuntata, crea un'evoluzione armonica
    * legata alla frase precedente; altrimenti genera una melodia completamente nuova.
    */
-  evolveMelody(silent = false) {
-    const currentNotes = this.pianoRoll.getNotesArray();
+  async evolveMelody(silent = false) {
+    await this.synth.initAudio();
+    let currentNotes = this.pianoRoll.getNotesArray();
+    if (currentNotes.length === 0) {
+      const scale = SCALES[this.scaleId] || SCALES.minor_natural;
+      const rootIndex = CHROMATIC_NOTES.indexOf(this.rootNote);
+      const baseMidi = 60 + rootIndex;
+      currentNotes = [0, 2, 4, 6, 8, 10, 12, 14].map(step => ({
+        step,
+        midi: baseMidi + (scale.intervals[Math.floor(Math.random() * scale.intervals.length)] || 0),
+        velocity: 0.85,
+        gate: 1,
+        active: 1
+      }));
+    }
     const keepTuned = this.keepTunedPrevToggle ? this.keepTunedPrevToggle.checked : true;
 
     // Salva nella cronologia prima dell'evoluzione
@@ -586,6 +698,9 @@ class MelodyApp {
       } else {
         this.showToast(`🎲 Nuova melodia indipendente generata in tonalità!`, "info");
       }
+      if (!this.isPlaying) {
+        this.auditionMelody();
+      }
     } else {
       this.showToast(`🔄 AUTO: Melodia cambiata (${result.type.replace(/_/g, " ")})`, "info");
     }
@@ -594,35 +709,71 @@ class MelodyApp {
   /**
    * Varia solo le altezze delle note in scala mantenendo la scansione ritmica
    */
-  variatePitches() {
-    const currentNotes = this.pianoRoll.getNotesArray();
-    if (currentNotes.length === 0) return;
+  async variatePitches() {
+    await this.synth.initAudio();
+    let currentNotes = this.pianoRoll.getNotesArray();
+    if (currentNotes.length === 0) {
+      const scale = SCALES[this.scaleId] || SCALES.minor_natural;
+      const rootIndex = CHROMATIC_NOTES.indexOf(this.rootNote);
+      const baseMidi = 60 + rootIndex;
+      currentNotes = [0, 2, 4, 6, 8, 10, 12, 14].map(step => ({
+        step,
+        midi: baseMidi + (scale.intervals[Math.floor(Math.random() * scale.intervals.length)] || 0),
+        velocity: 0.85,
+        gate: 1,
+        active: 1
+      }));
+    }
     this.aiEngine.pushHistory(currentNotes);
     const newNotes = this.aiEngine.variatePitchesOnly(currentNotes, this.rootNote, this.scaleId);
     this.pianoRoll.setNotesArray(newNotes);
     this.showToast("🎲 Note variate in tonalità (ritmo invariato)", "info");
+
+    if (!this.isPlaying) {
+      this.auditionMelody();
+    }
   }
 
   /**
    * Varia solo il ritmo e le sincopi mantenendo le stesse note intonate
    */
-  variateRhythm() {
-    const currentNotes = this.pianoRoll.getNotesArray();
-    if (currentNotes.length === 0) return;
+  async variateRhythm() {
+    await this.synth.initAudio();
+    let currentNotes = this.pianoRoll.getNotesArray();
+    if (currentNotes.length === 0) {
+      const scale = SCALES[this.scaleId] || SCALES.minor_natural;
+      const rootIndex = CHROMATIC_NOTES.indexOf(this.rootNote);
+      const baseMidi = 60 + rootIndex;
+      currentNotes = [0, 3, 6, 8, 10, 12, 14].map(step => ({
+        step,
+        midi: baseMidi + (scale.intervals[Math.floor(Math.random() * scale.intervals.length)] || 0),
+        velocity: 0.85,
+        gate: 1,
+        active: 1
+      }));
+    }
     this.aiEngine.pushHistory(currentNotes);
     const newNotes = this.aiEngine.variateRhythmOnly(currentNotes, this.numSteps);
     this.pianoRoll.setNotesArray(newNotes);
-    this.showToast("🥁 Ritmo melodico variato e sincopato", "info");
+    this.showToast("🎶 Ritmo melodico variato e sincopato", "info");
+
+    if (!this.isPlaying) {
+      this.auditionMelody();
+    }
   }
 
   /**
    * Torna indietro alla melodia precedente
    */
-  handleUndo() {
+  async handleUndo() {
+    await this.synth.initAudio();
     const prev = this.aiEngine.undo();
     if (prev) {
       this.pianoRoll.setNotesArray(prev.notes);
       this.showToast("⏪ Ripristinata melodia precedente", "info");
+      if (!this.isPlaying) {
+        this.auditionMelody();
+      }
     } else {
       this.showToast("ℹ️ Nessuna melodia precedente nella cronologia", "warning");
     }
@@ -647,6 +798,8 @@ class MelodyApp {
       if (this.aiPromptInput) this.aiPromptInput.focus();
       return;
     }
+
+    await this.synth.initAudio();
 
     if (this.aiStatusEl) {
       this.aiStatusEl.style.display = "block";
@@ -681,7 +834,7 @@ class MelodyApp {
 
       // Aggiorna Strumento se suggerito
       if (result.instrumentId) {
-        this.applyInstrumentPreset(result.instrumentId);
+        await this.applyInstrumentPreset(result.instrumentId, false);
       }
 
       // Aggiorna BPM se specificato
@@ -696,6 +849,10 @@ class MelodyApp {
         this.aiStatusEl.textContent = `✅ ${result.name} generata con successo in ${this.rootNote} ${SCALES[this.scaleId]?.name}!`;
       }
       this.showToast(`✨ ${result.name} pronta!`, "success");
+
+      if (!this.isPlaying) {
+        this.auditionMelody();
+      }
     } catch (err) {
       console.error("AI Error:", err);
       if (this.aiStatusEl) {
@@ -712,47 +869,7 @@ class MelodyApp {
   }
 
   bindDspSliders() {
-    const sliderIds = [
-      { id: "osc1-wave", param: "osc1_wave", type: "val" },
-      { id: "osc1-octave", param: "osc1_octave", type: "int" },
-      { id: "osc1-detune", param: "osc1_detune", type: "float" },
-      { id: "osc2-wave", param: "osc2_wave", type: "val" },
-      { id: "osc2-octave", param: "osc2_octave", type: "int" },
-      { id: "osc2-detune", param: "osc2_detune", type: "float" },
-      { id: "unison-voices", param: "unison_voices", type: "int" },
-      { id: "unison-detune", param: "unison_detune", type: "float" },
-      { id: "sub-level", param: "sub_level", type: "float" },
-      { id: "noise-level", param: "noise_level", type: "float" },
-      { id: "filter-type", param: "filter_type", type: "val" },
-      { id: "filter-cutoff", param: "filter_cutoff", type: "float" },
-      { id: "filter-resonance", param: "filter_resonance", type: "float" },
-      { id: "filter-env-amt", param: "filter_env_amount", type: "float" },
-      { id: "amp-attack", param: "amp_attack", type: "float" },
-      { id: "amp-decay", param: "amp_decay", type: "float" },
-      { id: "amp-sustain", param: "amp_sustain", type: "float" },
-      { id: "amp-release", param: "amp_release", type: "float" },
-      { id: "filt-attack", param: "filter_attack", type: "float" },
-      { id: "filt-decay", param: "filter_decay", type: "float" },
-      { id: "filt-sustain", param: "filter_sustain", type: "float" },
-      { id: "filt-release", param: "filter_release", type: "float" },
-      { id: "lfo-target", param: "lfo_target", type: "val" },
-      { id: "lfo-rate", param: "lfo_rate", type: "float" },
-      { id: "lfo-depth", param: "lfo_depth", type: "float" },
-      { id: "dist-drive", param: "dist_drive", type: "float" },
-      { id: "chorus-mix", param: "chorus_mix", type: "float" },
-      { id: "delay-time", param: "delay_time", type: "float" },
-      { id: "delay-feedback", param: "delay_feedback", type: "float" },
-      { id: "delay-mix", param: "delay_mix", type: "float" },
-      { id: "reverb-decay", param: "reverb_decay", type: "float" },
-      { id: "reverb-mix", param: "reverb_mix", type: "float" },
-      { id: "eq-low", param: "eq_low", type: "float" },
-      { id: "eq-mid", param: "eq_mid", type: "float" },
-      { id: "eq-high", param: "eq_high", type: "float" },
-      { id: "glide-time", param: "glide", type: "float" },
-      { id: "master-volume", param: "master_volume", type: "float" }
-    ];
-
-    sliderIds.forEach(item => {
+    DSP_PARAM_MAPPINGS.forEach(item => {
       const el = document.getElementById(item.id);
       if (!el) return;
 
@@ -775,15 +892,14 @@ class MelodyApp {
 
   updateKnobsUI() {
     const p = this.synth.params;
-    Object.keys(p).forEach(key => {
-      const el = document.querySelector(`[data-param="${key}"]`) || document.getElementById(key.replace(/_/g, "-"));
-      if (el) {
-        el.value = p[key];
-        const valDisplay = document.getElementById(`${el.id}-val`);
-        if (valDisplay) {
-          const v = p[key];
-          valDisplay.textContent = typeof v === "number" ? v.toFixed(v % 1 === 0 ? 0 : 2) : v;
-        }
+    DSP_PARAM_MAPPINGS.forEach(item => {
+      const el = document.getElementById(item.id);
+      if (!el || p[item.param] === undefined) return;
+      el.value = p[item.param];
+      const valDisplay = document.getElementById(`${item.id}-val`);
+      if (valDisplay) {
+        const v = p[item.param];
+        valDisplay.textContent = typeof v === "number" ? v.toFixed(v % 1 === 0 ? 0 : 2) : v;
       }
     });
   }
@@ -1054,3 +1170,5 @@ class MelodyApp {
 document.addEventListener("DOMContentLoaded", () => {
   window.melodyApp = new MelodyApp();
 });
+
+export { MelodyApp };

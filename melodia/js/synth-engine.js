@@ -32,6 +32,7 @@ export class MelodySynthEngine {
     this.kickGain = null;
     this.kickEnabled = false;
     this.kickVolume = 0.8;
+    this.kickSoundMode = "techno";
 
     // Active live voices (MIDI note -> voice instance)
     this.activeVoices = new Map();
@@ -385,7 +386,9 @@ export class MelodySynthEngine {
       osc1.type = p.osc1_wave || "sawtooth";
       const osc1Pitch = baseFreq * Math.pow(2, (p.osc1_octave || 0));
       osc1.frequency.setValueAtTime(osc1Pitch, now);
-      osc1.detune.setValueAtTime((p.osc1_detune || 0) + detuneOffset, now);
+      if (osc1.detune) {
+        osc1.detune.setValueAtTime((p.osc1_detune || 0) + detuneOffset, now);
+      }
 
       if (p.glide > 0 && this.lastPlayedFreq) {
         osc1.frequency.setValueAtTime(this.lastPlayedFreq, now);
@@ -393,7 +396,7 @@ export class MelodySynthEngine {
       }
 
       // Connessione LFO pitch se attivo
-      if (p.lfo_target === "pitch" && lfoGainNode) {
+      if (p.lfo_target === "pitch" && lfoGainNode && osc1.detune) {
         lfoGainNode.connect(osc1.detune);
       }
 
@@ -402,14 +405,16 @@ export class MelodySynthEngine {
       osc2.type = p.osc2_wave || "sawtooth";
       const osc2Pitch = baseFreq * Math.pow(2, (p.osc2_octave || 0));
       osc2.frequency.setValueAtTime(osc2Pitch, now);
-      osc2.detune.setValueAtTime((p.osc2_detune || 0) - detuneOffset, now);
+      if (osc2.detune) {
+        osc2.detune.setValueAtTime((p.osc2_detune || 0) - detuneOffset, now);
+      }
 
       if (p.glide > 0 && this.lastPlayedFreq) {
         osc2.frequency.setValueAtTime(this.lastPlayedFreq, now);
         osc2.frequency.exponentialRampToValueAtTime(osc2Pitch, now + p.glide);
       }
 
-      if (p.lfo_target === "pitch" && lfoGainNode) {
+      if (p.lfo_target === "pitch" && lfoGainNode && osc2.detune) {
         lfoGainNode.connect(osc2.detune);
       }
 
@@ -515,8 +520,8 @@ export class MelodySynthEngine {
   /**
    * Suona un colpo di cassa di riferimento intonata alla tonalità (Kick Reference)
    */
-  triggerReferenceKick(startTime = null, rootNote = "F") {
-    if (!this.kickEnabled) return;
+  triggerReferenceKick(startTime = null, rootNote = "F", force = false) {
+    if (!force && !this.kickEnabled) return;
     const ctx = this.ctx;
     if (!ctx) return;
     const now = startTime !== null ? startTime : ctx.currentTime;
@@ -525,25 +530,66 @@ export class MelodySynthEngine {
     const midiKick = noteNameToMidi(`${rootNote}1`);
     const kickFreq = midiToFreq(midiKick);
 
+    const mode = this.kickSoundMode || "techno";
+    let sweepStart = 7.0;
+    let sweepMid = 1.8;
+    let decayTime = 0.32;
+    let oscWave = "sine";
+
+    if (mode === "sub") {
+      sweepStart = 4.2;
+      sweepMid = 1.4;
+      decayTime = 0.45;
+      oscWave = "sine";
+    } else if (mode === "hardstyle") {
+      sweepStart = 11.0;
+      sweepMid = 2.4;
+      decayTime = 0.28;
+      oscWave = "triangle";
+    } else if (mode === "raw") {
+      sweepStart = 9.0;
+      sweepMid = 2.0;
+      decayTime = 0.30;
+      oscWave = "sawtooth";
+    } else { // techno
+      sweepStart = 7.0;
+      sweepMid = 1.8;
+      decayTime = 0.32;
+      oscWave = "sine";
+    }
+
     const osc = ctx.createOscillator();
+    osc.type = oscWave;
     const gain = ctx.createGain();
 
-    // Pitch sweep rapido dal punch verso il sub
-    osc.frequency.setValueAtTime(kickFreq * 7.0, now);
-    osc.frequency.exponentialRampToValueAtTime(kickFreq * 1.8, now + 0.03);
+    // Pitch sweep dal punch verso il sub intonato
+    osc.frequency.setValueAtTime(kickFreq * sweepStart, now);
+    osc.frequency.exponentialRampToValueAtTime(kickFreq * sweepMid, now + 0.035);
     osc.frequency.exponentialRampToValueAtTime(kickFreq, now + 0.09);
 
     // Inviluppo ampiezza cassa
     gain.gain.setValueAtTime(0.001, now);
     gain.gain.linearRampToValueAtTime(1.0, now + 0.003);
     gain.gain.exponentialRampToValueAtTime(0.7, now + 0.06);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + decayTime);
+
+    // Click attack per punch immediato
+    const clickOsc = ctx.createOscillator();
+    const clickGain = ctx.createGain();
+    clickOsc.frequency.setValueAtTime(900, now);
+    clickOsc.frequency.exponentialRampToValueAtTime(70, now + 0.018);
+    clickGain.gain.setValueAtTime(0.6, now);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.018);
+    clickOsc.connect(clickGain);
+    clickGain.connect(this.kickGain);
+    clickOsc.start(now);
+    clickOsc.stop(now + 0.02);
 
     osc.connect(gain);
     gain.connect(this.kickGain);
 
     osc.start(now);
-    osc.stop(now + 0.35);
+    osc.stop(now + decayTime + 0.05);
   }
 
   /**
@@ -577,6 +623,51 @@ export class MelodySynthEngine {
       this.eqMid.gain.setValueAtTime(val, this.ctx.currentTime);
     } else if (key === "eq_high" && this.eqHigh) {
       this.eqHigh.gain.setValueAtTime(val, this.ctx.currentTime);
+    }
+  }
+
+  /**
+   * Applica in blocco tutti i parametri al motore e aggiorna tutti i nodi Web Audio
+   */
+  applyAllParams(newParams = {}) {
+    this.params = { ...this.params, ...newParams };
+    if (!this.ctx) return;
+    const p = this.params;
+
+    if (this.distortionNode && p.dist_drive !== undefined) {
+      this.updateDistortionCurve(p.dist_drive);
+    }
+    if (this.reverbGain && p.reverb_mix !== undefined) {
+      this.reverbGain.gain.setValueAtTime(p.reverb_mix, this.ctx.currentTime);
+    }
+    if (this.reverbNode && p.reverb_decay !== undefined) {
+      this.updateReverbImpulse(this.ctx, p.reverb_decay, p.reverb_size || 0.7);
+    }
+    if (this.delayGain && p.delay_mix !== undefined) {
+      this.delayGain.gain.setValueAtTime(p.delay_mix, this.ctx.currentTime);
+    }
+    if (this.delayNodeL && p.delay_time !== undefined) {
+      this.delayNodeL.delayTime.setValueAtTime(p.delay_time, this.ctx.currentTime);
+      if (this.delayNodeR) this.delayNodeR.delayTime.setValueAtTime(p.delay_time * 1.5, this.ctx.currentTime);
+    }
+    if (this.delayFeedbackL && p.delay_feedback !== undefined) {
+      this.delayFeedbackL.gain.setValueAtTime(p.delay_feedback, this.ctx.currentTime);
+      if (this.delayFeedbackR) this.delayFeedbackR.gain.setValueAtTime(p.delay_feedback, this.ctx.currentTime);
+    }
+    if (this.chorusGain && p.chorus_mix !== undefined) {
+      this.chorusGain.gain.setValueAtTime(p.chorus_mix, this.ctx.currentTime);
+    }
+    if (this.masterGain && p.master_volume !== undefined) {
+      this.masterGain.gain.setValueAtTime(p.master_volume, this.ctx.currentTime);
+    }
+    if (this.eqLow && p.eq_low !== undefined) {
+      this.eqLow.gain.setValueAtTime(p.eq_low, this.ctx.currentTime);
+    }
+    if (this.eqMid && p.eq_mid !== undefined) {
+      this.eqMid.gain.setValueAtTime(p.eq_mid, this.ctx.currentTime);
+    }
+    if (this.eqHigh && p.eq_high !== undefined) {
+      this.eqHigh.gain.setValueAtTime(p.eq_high, this.ctx.currentTime);
     }
   }
 

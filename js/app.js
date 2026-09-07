@@ -471,6 +471,7 @@ class KickForgeApp {
     this.sequencer.kickVelocities = [1.0, 0.7, 0.7, 0.7, 0.95, 0.7, 0.7, 0.7, 0.95, 0.7, 0.7, 0.7, 0.95, 0.7, 0.7, 0.7];
     this.refreshKickSequencerStepsUI();
     document.querySelectorAll(".pattern-btn").forEach(b => b.classList.remove("active"));
+    if (!this.sequencer.isPlaying) this.triggerKick();
     if (!silent) this.uiManager.showToast("🥁 Ritmo cassa variato (sempre 4/4)", "info");
   }
 
@@ -485,6 +486,7 @@ class KickForgeApp {
     this.refreshHiHatStepsUI();
     const hatToggle = document.getElementById("toggle-seq-hihat");
     if (hatToggle) hatToggle.checked = true;
+    if (!this.sequencer.isPlaying) this.audioEngine.triggerHiHat(0.85);
     if (!silent) this.uiManager.showToast("🎩 Ritmo hi-hat variato", "info");
   }
 
@@ -506,6 +508,10 @@ class KickForgeApp {
     }
     if (!seq.bassPattern.some(s => s.active)) seq.bassPattern[0].active = 1;
     this.renderBassSequencerGrid();
+    if (!this.sequencer.isPlaying) {
+      const firstNote = seq.bassPattern.find(s => s.active) || { note: "C2", active: 1, accent: 1 };
+      this.audioEngine.triggerBassNote(this.currentBassParams, firstNote, null, 0.25, true);
+    }
     if (!silent) this.uiManager.showToast("🎸 Ritmo basso variato (note/ottave)", "info");
   }
 
