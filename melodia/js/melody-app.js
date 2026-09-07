@@ -39,6 +39,9 @@ class MelodyApp {
     this.metronomeActive = false;
     this.kickReferenceActive = true;
     this.synth.kickEnabled = true;
+    this.currentKickRhythmFn = (step) => step % 4 === 0;
+    this.kickRhythmIndex = 0;
+    this.kickSoundIndex = 0;
 
     this.initDOM();
     this.initPianoRoll();
@@ -46,6 +49,7 @@ class MelodyApp {
     this.initScalesUI();
     this.initControls();
     this.initAI();
+    this.initVariazioniPanel();
     this.initVirtualKeyboard();
     this.loadKickForgeSession();
 
@@ -439,6 +443,118 @@ class MelodyApp {
   }
 
   /**
+   * Inizializzazione del Pannello Variazioni Rapide (Suono & Ritmo)
+   */
+  initVariazioniPanel() {
+    // SUONO
+    document.getElementById("var-suono-melodia-btn")?.addEventListener("click", () => this.variateSynthSound());
+    document.getElementById("var-cambia-strumento-btn")?.addEventListener("click", () => this.cycleRandomInstrument());
+    document.getElementById("var-suono-cassa-btn")?.addEventListener("click", () => this.variateKickSound());
+
+    // RITMO (pattern)
+    document.getElementById("var-ritmo-melodia-btn")?.addEventListener("click", () => this.variatePitches());
+    document.getElementById("var-ritmo-cassa-btn")?.addEventListener("click", () => this.cycleKickRhythm());
+    document.getElementById("var-arpeggio-btn")?.addEventListener("click", () => this.transformToArpeggio());
+    document.getElementById("var-evolvi-btn")?.addEventListener("click", () => this.evolveMelody(false));
+  }
+
+  /**
+   * Variazione del timbro del sintetizzatore (filtri ed effetti FX)
+   */
+  variateSynthSound() {
+    const p = this.synth.params;
+    const cutoffMult = [0.7, 0.82, 1.22, 1.45, 1.65][Math.floor(Math.random() * 5)];
+    p.filter_cutoff = Math.max(300, Math.min(12000, Math.round(p.filter_cutoff * cutoffMult)));
+    p.filter_resonance = Math.max(1.0, Math.min(14.0, +(p.filter_resonance * (0.7 + Math.random() * 0.7)).toFixed(1)));
+    p.reverb_mix = Math.max(0.1, Math.min(0.65, +(p.reverb_mix + (Math.random() * 0.2 - 0.1)).toFixed(2)));
+    p.delay_mix = Math.max(0.1, Math.min(0.55, +(p.delay_mix + (Math.random() * 0.2 - 0.1)).toFixed(2)));
+    p.dist_drive = Math.max(0.05, Math.min(0.7, +(p.dist_drive + (Math.random() * 0.2 - 0.1)).toFixed(2)));
+
+    this.synth.updateDistortionCurve(p.dist_drive);
+    if (this.synth.reverbGain && this.synth.ctx) {
+      this.synth.reverbGain.gain.setValueAtTime(p.reverb_mix, this.synth.ctx.currentTime);
+    }
+    if (this.synth.delayGain && this.synth.ctx) {
+      this.synth.delayGain.gain.setValueAtTime(p.delay_mix, this.synth.ctx.currentTime);
+    }
+    this.updateKnobsUI();
+    this.showToast(`🎛️ Suono melodia variato (Cutoff: ${p.filter_cutoff}Hz, Res: ${p.filter_resonance})`, "info");
+  }
+
+  /**
+   * Cambia strumento pescando a sorpresa tra i 12 preset di modelli disponibili
+   */
+  cycleRandomInstrument() {
+    const currentId = this.instrumentSelect?.value;
+    const others = INSTRUMENT_PRESETS.filter(p => p.id !== currentId);
+    const chosen = others[Math.floor(Math.random() * others.length)] || INSTRUMENT_PRESETS[0];
+    this.applyInstrumentPreset(chosen.id);
+  }
+
+  /**
+   * Varia il timbro della cassa di riferimento intonata (punch / decay / sub)
+   */
+  variateKickSound() {
+    const kickModes = ["Sub profondo", "Punchy Hardstyle", "Tight Techno", "Distorto Frenchcore"];
+    this.kickSoundIndex = ((this.kickSoundIndex || 0) + 1) % kickModes.length;
+    this.synth.kickVolume = [0.85, 1.0, 0.75, 0.95][this.kickSoundIndex];
+    if (this.synth.kickGain && this.synth.ctx) {
+      this.synth.kickGain.gain.setValueAtTime(this.synth.kickVolume, this.synth.ctx.currentTime);
+    }
+    // Esegui colpo cassa di anteprima
+    if (this.synth.ctx) {
+      this.synth.triggerReferenceKick(this.synth.ctx.currentTime + 0.05, this.rootNote);
+    }
+    this.showToast(`🎛️ Timbro cassa: ${kickModes[this.kickSoundIndex]}`, "info");
+  }
+
+  /**
+   * Varia il ritmo della cassa di riferimento (4/4 sul battere, levare offbeat, gallop, ottavi)
+   */
+  cycleKickRhythm() {
+    const rhythms = [
+      { name: "4/4 Standard (Battere)", fn: (s) => s % 4 === 0 },
+      { name: "Levare Offbeat (Techno)", fn: (s) => s % 4 === 2 },
+      { name: "Frenchcore Gallop", fn: (s) => s % 4 === 0 || s % 4 === 3 },
+      { name: "Ottavi Incalzanti", fn: (s) => s % 2 === 0 }
+    ];
+    this.kickRhythmIndex = ((this.kickRhythmIndex || 0) + 1) % rhythms.length;
+    this.currentKickRhythmFn = rhythms[this.kickRhythmIndex].fn;
+    this.showToast(`🥁 Ritmo cassa: ${rhythms[this.kickRhythmIndex].name}`, "info");
+  }
+
+  /**
+   * Trasforma le note correnti in un arpeggio fluido a sedicesimi
+   */
+  transformToArpeggio() {
+    const currentNotes = this.pianoRoll.getNotesArray();
+    this.aiEngine.pushHistory(currentNotes);
+    const usedMidis = currentNotes.length ? currentNotes.map(n => n.midi) : [];
+    const scale = SCALES[this.scaleId] || SCALES.minor_natural;
+    const rootIndex = CHROMATIC_NOTES.indexOf(this.rootNote);
+    const intervals = scale.intervals;
+    const baseMidi = 60 + rootIndex;
+
+    const pool = usedMidis.length ? [...new Set(usedMidis)] : intervals.map(i => baseMidi + i);
+    pool.sort((a, b) => a - b);
+
+    const newNotes = [];
+    for (let s = 0; s < this.numSteps; s++) {
+      const idx = s % (pool.length * 2 - 2 || 1);
+      const noteMidi = idx < pool.length ? pool[idx] : pool[2 * pool.length - 2 - idx];
+      newNotes.push({
+        step: s,
+        midi: noteMidi,
+        velocity: (s % 4 === 0) ? 0.95 : 0.82,
+        gate: 1,
+        active: 1
+      });
+    }
+    this.pianoRoll.setNotesArray(newNotes);
+    this.showToast("✨ Pattern trasformato in arpeggio fluido a sedicesimi!", "success");
+  }
+
+  /**
    * Cambia ed evolve la melodia.
    * Se la casella "Intonata alla precedente" è spuntata, crea un'evoluzione armonica
    * legata alla frase precedente; altrimenti genera una melodia completamente nuova.
@@ -800,8 +916,9 @@ class MelodyApp {
       if (this.isPlaying) this.pianoRoll.setPlayhead(step);
     }, delayMs);
 
-    // Esegui Cassa di Riferimento se abilitata (ogni quarto: step 0, 4, 8, 12...)
-    if (step % 4 === 0) {
+    // Esegui Cassa di Riferimento se abilitata
+    const shouldKick = this.currentKickRhythmFn ? this.currentKickRhythmFn(step) : (step % 4 === 0);
+    if (shouldKick) {
       this.synth.triggerReferenceKick(time, this.rootNote);
     }
 

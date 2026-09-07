@@ -1146,6 +1146,91 @@ body {
 }
 
 /* ==========================================================================
+   PANNELLO VARIAZIONI (COME KICKFORGE 303)
+   ========================================================================== */
+.var-panel-card {
+  margin-bottom: 24px;
+}
+
+.var-block {
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--shadow-panel);
+}
+
+.mixer-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.var-tag {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent-melody);
+  white-space: nowrap;
+}
+
+.mixer-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.var-row-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: #38bdf8;
+  margin: 4px 0 2px;
+}
+
+.var-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.var-btn {
+  flex: 1 1 auto;
+  min-width: 140px;
+  padding: 11px 18px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.var-btn:hover {
+  background: var(--bg-surface-3);
+  border-color: var(--accent-melody);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px var(--accent-melody-glow);
+}
+
+.var-btn:active {
+  transform: translateY(1px);
+}
+
+/* ==========================================================================
    FOOTER
    ========================================================================== */
 .studio-footer {
