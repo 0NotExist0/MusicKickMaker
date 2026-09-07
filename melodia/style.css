@@ -1,0 +1,926 @@
+/* ==========================================================================
+   MELODYFORGE STUDIO - DESIGN SYSTEM & STYLESHEET
+   Sintetizzatore Melodico Polifonico & Piano Roll Intonato con i Kick
+   ========================================================================== */
+
+:root {
+  /* Palette Principale */
+  --bg-core: #090a0d;
+  --bg-surface-1: #111319;
+  --bg-surface-2: #181b24;
+  --bg-surface-3: #222633;
+  --bg-surface-active: #2d3345;
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.16);
+  --border-highlight: rgba(255, 255, 255, 0.3);
+
+  /* Accenti Melodia & Sintesi */
+  --accent-melody: #a855f7;       /* Viola Melodia */
+  --accent-melody-glow: rgba(168, 85, 247, 0.45);
+  --accent-cyan: #06b6d4;         /* Ciano Armonia / Sub */
+  --accent-cyan-glow: rgba(6, 182, 212, 0.45);
+  --accent-pink: #ec4899;         /* Magenta Lead / Synth */
+  --accent-pink-glow: rgba(236, 72, 153, 0.45);
+  --accent-amber: #f59e0b;        /* Oro Cassa Intonata */
+  --accent-amber-glow: rgba(245, 158, 11, 0.45);
+  --accent-green: #22c55e;        /* Verde 303 */
+
+  /* Testo */
+  --text-primary: #f9fafb;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-brand: 'Orbitron', sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
+  --shadow-panel: 0 10px 30px rgba(0, 0, 0, 0.65);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-core);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(168, 85, 247, 0.15), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 90% 80%, rgba(6, 182, 212, 0.08), transparent 60%);
+  background-attachment: fixed;
+}
+
+.app-wrapper {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 20px 24px 60px;
+}
+
+/* ==========================================================================
+   STUDIO NAVIGATION BAR
+   ========================================================================== */
+.studio-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 6px 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+.studio-nav-links {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.studio-nav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: var(--font-brand);
+  text-decoration: none;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.studio-nav-tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface-2);
+}
+
+.studio-nav-tab.active {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(236, 72, 153, 0.25));
+  border-color: var(--accent-melody);
+  color: #fff;
+  box-shadow: 0 0 14px var(--accent-melody-glow);
+}
+
+.studio-nav-tag {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   TOP HEADER
+   ========================================================================== */
+.top-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 18px 24px;
+  margin-bottom: 24px;
+}
+
+.brand-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.brand-badge {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: var(--accent-melody);
+  text-transform: uppercase;
+}
+
+.brand-title {
+  font-family: var(--font-brand);
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  background: linear-gradient(135deg, #ffffff 40%, var(--accent-melody) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.highlight-lead {
+  color: var(--accent-pink);
+  -webkit-text-fill-color: var(--accent-pink);
+  text-shadow: 0 0 16px var(--accent-pink-glow);
+}
+
+.brand-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Pulsanti Generici */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-medium);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-melody), #7c3aed);
+  border-color: #9333ea;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px var(--accent-melody-glow);
+}
+
+.btn-secondary {
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+  border-color: var(--border-medium);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-surface-3);
+  border-color: var(--border-highlight);
+}
+
+.btn-glow {
+  box-shadow: 0 0 14px var(--accent-melody-glow);
+}
+
+.btn-active-glow {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.6) !important;
+  border-color: #f87171 !important;
+}
+
+/* ==========================================================================
+   PANNELLO ARMONIA & INTONAZIONE CASSA
+   ========================================================================== */
+.harmony-card {
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-panel);
+}
+
+.harmony-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to bottom, var(--accent-amber), var(--accent-melody));
+}
+
+.card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-icon-badge {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--accent-amber);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
+.section-title {
+  font-family: var(--font-brand);
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.section-sub {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.harmony-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.control-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.control-label {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  justify-content: space-between;
+}
+
+.select-input, .text-input {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.select-input:focus, .text-input:focus {
+  border-color: var(--accent-melody);
+  box-shadow: 0 0 8px var(--accent-melody-glow);
+}
+
+.badge-highlight {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 800;
+  background: rgba(168, 85, 247, 0.2);
+  border: 1px solid var(--accent-melody);
+  color: #fff;
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-checkbox {
+  accent-color: var(--accent-melody);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   RACK STRUMENTO & SOUND DESIGN (DSP)
+   ========================================================================== */
+.synth-rack-card {
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-panel);
+}
+
+.preset-banner {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.preset-selector-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.instrument-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  max-width: 500px;
+}
+
+.rack-modules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.module-card {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.module-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 8px;
+}
+
+.module-title {
+  font-family: var(--font-brand);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--accent-cyan);
+}
+
+.module-tag {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.knob-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.slider-group.full-width {
+  grid-column: span 2;
+}
+
+.slider-label-row {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.slider-val {
+  color: var(--accent-melody);
+  font-weight: 700;
+}
+
+.range-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-surface-3);
+  outline: none;
+  transition: background 0.2s;
+}
+
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--accent-melody);
+  cursor: pointer;
+  box-shadow: 0 0 8px var(--accent-melody-glow);
+  transition: transform 0.1s;
+}
+
+.range-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* ==========================================================================
+   PIANO ROLL STUDIO & SEQUENCER
+   ========================================================================== */
+.pianoroll-card {
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-panel);
+}
+
+.sequencer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  margin-bottom: 16px;
+}
+
+.transport-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bpm-badge-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-surface-3);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.bpm-number {
+  color: var(--accent-amber);
+  font-size: 1rem;
+}
+
+.tools-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Contenitore Piano Roll Scrollabile */
+.pianoroll-outer-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 480px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: #0d0f14;
+}
+
+.pianoroll-wrapper {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  width: 100%;
+  min-width: 780px;
+}
+
+.pianoroll-corner-header {
+  grid-column: 1;
+  grid-row: 1;
+  background: #141720;
+  border-bottom: 1px solid var(--border-medium);
+  border-right: 1px solid var(--border-medium);
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-brand);
+  font-size: 0.75rem;
+  color: var(--accent-melody);
+  position: sticky;
+  left: 0;
+  top: 0;
+  z-index: 10;
+}
+
+.pianoroll-steps-header {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  height: 32px;
+  background: #141720;
+  border-bottom: 1px solid var(--border-medium);
+  position: sticky;
+  top: 0;
+  z-index: 9;
+}
+
+.pr-step-badge {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.1s;
+}
+
+.pr-step-badge.pr-beat-start {
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text-secondary);
+}
+
+.pr-step-badge.active {
+  background: var(--accent-melody-glow);
+  color: #fff;
+  border-bottom: 2px solid var(--accent-melody);
+}
+
+.pianoroll-keyboard-col {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  left: 0;
+  z-index: 8;
+  background: #141720;
+  border-right: 1px solid var(--border-medium);
+}
+
+.pr-key {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.1s;
+}
+
+.pr-key-white {
+  background: #1e2230;
+  color: #e2e8f0;
+}
+
+.pr-key-black {
+  background: #0f1117;
+  color: #94a3b8;
+}
+
+.pr-key-root {
+  background: rgba(245, 158, 11, 0.25) !important;
+  color: var(--accent-amber) !important;
+  border-left: 3px solid var(--accent-amber);
+}
+
+.pr-key-in-scale {
+  font-weight: 800;
+}
+
+.pr-key-out-scale {
+  opacity: 0.45;
+}
+
+.pr-key:hover {
+  filter: brightness(1.3);
+}
+
+.pr-root-dot {
+  color: var(--accent-amber);
+  font-size: 0.75rem;
+}
+
+.pianoroll-grid-body {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+}
+
+.pr-row {
+  height: 24px;
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.pr-row-white {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.pr-row-black {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.pr-row-root {
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.pr-row-in-scale {
+  /* Note intonate */
+}
+
+.pr-row-out-scale {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(0, 0, 0, 0.3),
+    rgba(0, 0, 0, 0.3) 10px,
+    rgba(0, 0, 0, 0.4) 10px,
+    rgba(0, 0, 0, 0.4) 20px
+  );
+}
+
+.pr-cell {
+  flex: 1;
+  height: 100%;
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.05s;
+}
+
+.pr-cell.pr-beat-cell {
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.pr-cell:hover {
+  background: rgba(168, 85, 247, 0.15);
+}
+
+.pr-cell.playhead-active {
+  background: rgba(6, 182, 212, 0.15);
+  border-right: 1px solid var(--accent-cyan);
+}
+
+/* Blocco Nota */
+.pr-note-block {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  right: 1px;
+  bottom: 1px;
+  background: linear-gradient(135deg, var(--accent-melody), var(--accent-pink));
+  border: 1px solid #fff;
+  border-radius: 3px;
+  box-shadow: 0 0 8px var(--accent-melody-glow);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+  z-index: 2;
+  cursor: pointer;
+}
+
+.pr-note-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  pointer-events: none;
+}
+
+.pr-note-gate-handle {
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 0 2px 2px 0;
+}
+
+/* ==========================================================================
+   TASTIERA VIRTUALE INTERATTIVA (LIVE JAMMING)
+   ========================================================================== */
+.virtual-keyboard-card {
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-panel);
+}
+
+.vk-keys-wrapper {
+  display: flex;
+  height: 90px;
+  background: #090a0d;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  overflow-x: auto;
+  user-select: none;
+  gap: 2px;
+}
+
+.vk-key {
+  flex: 1;
+  min-width: 24px;
+  height: 100%;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 6px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  position: relative;
+}
+
+.vk-key-white {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.vk-key-black {
+  background: #1e293b;
+  color: #94a3b8;
+  height: 65%;
+  z-index: 2;
+}
+
+.vk-key-root {
+  background: var(--accent-amber) !important;
+  color: #000 !important;
+  box-shadow: 0 0 10px var(--accent-amber-glow);
+}
+
+.vk-key-in-scale::after {
+  content: "•";
+  position: absolute;
+  top: 4px;
+  color: var(--accent-melody);
+  font-size: 1rem;
+}
+
+.vk-key:hover {
+  filter: brightness(1.2);
+}
+
+.vk-key.vk-pressed {
+  transform: translateY(2px);
+  background: var(--accent-pink) !important;
+  color: #fff !important;
+  box-shadow: 0 0 16px var(--accent-pink-glow) !important;
+}
+
+.vk-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 800;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   TOAST NOTIFICATIONS
+   ========================================================================== */
+#toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 99999;
+}
+
+.app-toast {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-highlight);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: toastIn 0.3s ease forwards;
+}
+
+.app-toast-success {
+  border-color: var(--accent-green);
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.app-toast-warning {
+  border-color: var(--accent-amber);
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.app-toast-info {
+  border-color: var(--accent-melody);
+  background: rgba(168, 85, 247, 0.15);
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.toast-fade-out {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: all 0.4s ease;
+}
+
+/* ==========================================================================
+   FOOTER
+   ========================================================================== */
+.studio-footer {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 40px;
+  font-family: var(--font-mono);
+}

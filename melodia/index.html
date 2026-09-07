@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MelodyForge Studio - Melodie Intonate ai Kick, Synth & Piano Roll</title>
+  <meta name="description" content="Sintetizzatore polifonico, piano roll e generatore di melodie perfettamente intonate ai colpi di cassa (Kick) per Hardstyle, Techno, Acid e Trance.">
+
+  <!-- Google Fonts: Plus Jakarta Sans, JetBrains Mono, Orbitron -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Orbitron:wght@600;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-wrapper">
+
+    <!-- ============================================== -->
+    <!-- STUDIO NAVIGATION BAR (COMMUTATORE AMBIENTI)   -->
+    <!-- ============================================== -->
+    <nav class="studio-nav-bar">
+      <div class="studio-nav-links">
+        <a href="../index.html" class="studio-nav-tab" title="Torna allo studio per creare e scolpire casse e linee di basso">
+          <span>🥁</span> PASSA A KICK & BASS FORGE
+        </a>
+        <a href="index.html" class="studio-nav-tab active" title="Studio melodia e armonia corrente">
+          <span>🎹</span> MELODIA STUDIO
+        </a>
+      </div>
+      <span class="studio-nav-tag">MELODYFORGE v1.0 • HARMONIC SYSTEM</span>
+    </nav>
+
+    <!-- ============================================== -->
+    <!-- INTESTAZIONE PRINCIPALE & AZIONI               -->
+    <!-- ============================================== -->
+    <header class="top-header">
+      <div class="brand-section">
+        <div class="brand-badge">STUDIO ARMONICO • LEAD & MELODIA</div>
+        <h1 class="brand-title">MELODYFORGE <span class="highlight-lead">LEAD</span></h1>
+        <span class="brand-subtitle">Componi melodie e riff perfettamente intonati con la tonalità dei tuoi Kick</span>
+      </div>
+
+      <div class="header-actions">
+        <button id="export-midi-btn" class="btn btn-secondary" title="Scarica il file .mid per trascinarlo dentro Ableton, FL Studio, Logic o Cubase">
+          <span class="btn-icon">🎼</span> ESPORTA MIDI (.MID)
+        </button>
+        <button id="export-wav-btn" class="btn btn-primary btn-glow" title="Rendering audio ad alta definizione del loop melodico">
+          <span class="btn-icon">⬇</span> SCARICA AUDIO (.WAV)
+        </button>
+      </div>
+    </header>
+
+    <!-- ============================================== -->
+    <!-- PANNELLO ARMONIA & INTONAZIONE CASSA           -->
+    <!-- ============================================== -->
+    <section class="harmony-card">
+      <div class="card-header-row">
+        <div class="card-title-group">
+          <span class="section-icon-badge">🎯</span>
+          <div>
+            <h2 class="section-title">INTONAZIONE & SINTONIA CON LA CASSA</h2>
+            <p class="section-sub">Imposta la nota fondamentale della cassa e la scala per bloccare note stonate</p>
+          </div>
+        </div>
+
+        <div id="current-tuning-badge" class="badge-highlight">
+          Fa (F) Minore Naturale
+        </div>
+      </div>
+
+      <div class="harmony-grid">
+        <div class="control-field">
+          <label class="control-label" for="melody-root-select">Tonalità Fondamentale:</label>
+          <select id="melody-root-select" class="select-input" aria-label="Tonalità fondamentale"></select>
+        </div>
+
+        <div class="control-field">
+          <label class="control-label" for="melody-scale-select">Scala Musicale / Modo:</label>
+          <select id="melody-scale-select" class="select-input" aria-label="Scala musicale"></select>
+        </div>
+
+        <div class="control-field">
+          <label class="control-label">Sincronizzazione Cassa:</label>
+          <button id="sync-kick-btn" class="btn btn-secondary" title="Legge automaticamente la tonalità e il BPM dall'ultima cassa usata in KickForge">
+            🔄 Sincronizza da KickForge
+          </button>
+        </div>
+
+        <div class="control-field">
+          <label class="control-label">Blocco Note (Scale Lock):</label>
+          <label class="toggle-label">
+            <input type="checkbox" id="scale-lock-toggle" class="toggle-checkbox">
+            Forza solo note in scala
+          </label>
+        </div>
+
+        <div class="control-field">
+          <label class="control-label">Cassa di Riferimento (Monitor):</label>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <label class="toggle-label" title="Suona un colpo di cassa intonato sul battere per testare il groove">
+              <input type="checkbox" id="kick-ref-toggle" class="toggle-checkbox" checked>
+              Kick sul Battere
+            </label>
+            <input type="range" id="kick-ref-vol" class="range-slider" min="0" max="1" step="0.05" value="0.75" style="width: 80px;" title="Volume cassa di prova">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- RACK STRUMENTO & SOUND DESIGN (DSP)            -->
+    <!-- ============================================== -->
+    <section class="synth-rack-card">
+      <div class="preset-banner">
+        <div class="preset-selector-group">
+          <span style="font-family: var(--font-brand); font-size: 0.9rem; font-weight:800; color:var(--accent-melody);">STRUMENTO:</span>
+          <select id="melody-instrument-select" class="select-input" style="min-width: 260px;"></select>
+        </div>
+        <p id="instrument-description" class="instrument-desc">Caricamento caratteristiche timbriche dello strumento...</p>
+      </div>
+
+      <div class="rack-modules-grid">
+        <!-- MODULO 1: OSCILLATORI & UNISON -->
+        <div class="module-card">
+          <div class="module-header">
+            <span class="module-title">OSCILLATORI & UNISON</span>
+            <span class="module-tag">DUAL OSC + SPREAD</span>
+          </div>
+
+          <div class="knob-grid">
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>OSC 1 Forma</span>
+              </div>
+              <select id="osc1-wave" class="select-input">
+                <option value="sawtooth">Dente di Sega (Saw)</option>
+                <option value="square">Quadra (Square)</option>
+                <option value="triangle">Triangolare</option>
+                <option value="sine">Sinusoidale</option>
+              </select>
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>OSC 1 Ottava</span>
+                <span id="osc1-octave-val" class="slider-val">0</span>
+              </div>
+              <input type="range" id="osc1-octave" class="range-slider" min="-2" max="2" step="1" value="0">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>OSC 2 Forma</span>
+              </div>
+              <select id="osc2-wave" class="select-input">
+                <option value="sawtooth">Dente di Sega (Saw)</option>
+                <option value="square" selected>Quadra (Square)</option>
+                <option value="triangle">Triangolare</option>
+                <option value="sine">Sinusoidale</option>
+              </select>
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>OSC 2 Detune</span>
+                <span id="osc2-detune-val" class="slider-val">7</span>
+              </div>
+              <input type="range" id="osc2-detune" class="range-slider" min="-25" max="25" step="1" value="7">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Unison Voci</span>
+                <span id="unison-voices-val" class="slider-val">3</span>
+              </div>
+              <input type="range" id="unison-voices" class="range-slider" min="1" max="7" step="1" value="3">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Unison Spread</span>
+                <span id="unison-detune-val" class="slider-val">18</span>
+              </div>
+              <input type="range" id="unison-detune" class="range-slider" min="0" max="40" step="1" value="18">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Sub Bass</span>
+                <span id="sub-level-val" class="slider-val">0.3</span>
+              </div>
+              <input type="range" id="sub-level" class="range-slider" min="0" max="1" step="0.05" value="0.3">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Rumore / Transiente</span>
+                <span id="noise-level-val" class="slider-val">0.04</span>
+              </div>
+              <input type="range" id="noise-level" class="range-slider" min="0" max="0.3" step="0.01" value="0.04">
+            </div>
+          </div>
+        </div>
+
+        <!-- MODULO 2: FILTRO VCF & MODULAZIONE -->
+        <div class="module-card">
+          <div class="module-header">
+            <span class="module-title">FILTRO VCF & LFO</span>
+            <span class="module-tag">RESONANCE & MOD</span>
+          </div>
+
+          <div class="knob-grid">
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Tipo Filtro</span>
+              </div>
+              <select id="filter-type" class="select-input">
+                <option value="lowpass">Passa-Basso (LP 24dB)</option>
+                <option value="bandpass">Passa-Banda (BP)</option>
+                <option value="highpass">Passa-Alto (HP)</option>
+              </select>
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Cutoff (Hz)</span>
+                <span id="filter-cutoff-val" class="slider-val">3500</span>
+              </div>
+              <input type="range" id="filter-cutoff" class="range-slider" min="100" max="16000" step="100" value="3500">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Risonanza (Q)</span>
+                <span id="filter-resonance-val" class="slider-val">3.0</span>
+              </div>
+              <input type="range" id="filter-resonance" class="range-slider" min="0.5" max="18" step="0.5" value="3.0">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Env Mod</span>
+                <span id="filter-env-amt-val" class="slider-val">3000</span>
+              </div>
+              <input type="range" id="filter-env-amt" class="range-slider" min="-6000" max="8000" step="200" value="3000">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>LFO Destinazione</span>
+              </div>
+              <select id="lfo-target" class="select-input">
+                <option value="pitch">Vibrato (Pitch)</option>
+                <option value="cutoff">Filtro Cutoff (Wah)</option>
+                <option value="amp">Tremolo (Ampiezza)</option>
+                <option value="none">Spento (Nessuno)</option>
+              </select>
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>LFO Velocità</span>
+                <span id="lfo-rate-val" class="slider-val">4.5</span>
+              </div>
+              <input type="range" id="lfo-rate" class="range-slider" min="0.2" max="15" step="0.2" value="4.5">
+            </div>
+          </div>
+        </div>
+
+        <!-- MODULO 3: INVILUPPI ADSR -->
+        <div class="module-card">
+          <div class="module-header">
+            <span class="module-title">INVILUPPI ADSR</span>
+            <span class="module-tag">AMP & FILTER</span>
+          </div>
+
+          <div class="knob-grid">
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Amp Attack (s)</span>
+                <span id="amp-attack-val" class="slider-val">0.005</span>
+              </div>
+              <input type="range" id="amp-attack" class="range-slider" min="0.001" max="1.0" step="0.005" value="0.005">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Amp Decay (s)</span>
+                <span id="amp-decay-val" class="slider-val">0.25</span>
+              </div>
+              <input type="range" id="amp-decay" class="range-slider" min="0.02" max="1.5" step="0.02" value="0.25">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Amp Sustain</span>
+                <span id="amp-sustain-val" class="slider-val">0.7</span>
+              </div>
+              <input type="range" id="amp-sustain" class="range-slider" min="0" max="1" step="0.05" value="0.7">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Amp Release (s)</span>
+                <span id="amp-release-val" class="slider-val">0.35</span>
+              </div>
+              <input type="range" id="amp-release" class="range-slider" min="0.02" max="2.0" step="0.05" value="0.35">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Filt Decay (s)</span>
+                <span id="filt-decay-val" class="slider-val">0.2</span>
+              </div>
+              <input type="range" id="filt-decay" class="range-slider" min="0.02" max="1.5" step="0.02" value="0.2">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Filt Sustain</span>
+                <span id="filt-sustain-val" class="slider-val">0.3</span>
+              </div>
+              <input type="range" id="filt-sustain" class="range-slider" min="0" max="1" step="0.05" value="0.3">
+            </div>
+          </div>
+        </div>
+
+        <!-- MODULO 4: FX RACK DA STUDIO -->
+        <div class="module-card">
+          <div class="module-header">
+            <span class="module-title">EFFETTI DA STUDIO (FX)</span>
+            <span class="module-tag">DELAY • REVERB • DRIVE</span>
+          </div>
+
+          <div class="knob-grid">
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Distorsione / Drive</span>
+                <span id="dist-drive-val" class="slider-val">0.2</span>
+              </div>
+              <input type="range" id="dist-drive" class="range-slider" min="0" max="0.9" step="0.05" value="0.2">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Stereo Chorus Mix</span>
+                <span id="chorus-mix-val" class="slider-val">0.35</span>
+              </div>
+              <input type="range" id="chorus-mix" class="range-slider" min="0" max="0.8" step="0.05" value="0.35">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Delay Feedback</span>
+                <span id="delay-feedback-val" class="slider-val">0.35</span>
+              </div>
+              <input type="range" id="delay-feedback" class="range-slider" min="0" max="0.8" step="0.05" value="0.35">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Delay Mix</span>
+                <span id="delay-mix-val" class="slider-val">0.25</span>
+              </div>
+              <input type="range" id="delay-mix" class="range-slider" min="0" max="0.7" step="0.05" value="0.25">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Reverb Riverbero Mix</span>
+                <span id="reverb-mix-val" class="slider-val">0.3</span>
+              </div>
+              <input type="range" id="reverb-mix" class="range-slider" min="0" max="0.8" step="0.05" value="0.3">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Portamento / Glide</span>
+                <span id="glide-time-val" class="slider-val">0.0</span>
+              </div>
+              <input type="range" id="glide-time" class="range-slider" min="0" max="0.15" step="0.01" value="0.0">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- PIANO ROLL STUDIO & SEQUENCER                  -->
+    <!-- ============================================== -->
+    <section class="pianoroll-card">
+      <div class="sequencer-toolbar">
+        <div class="transport-controls">
+          <button id="melody-play-btn" class="btn btn-primary" title="Avvia o metti in pausa la riproduzione del loop">
+            <span class="btn-icon">▶</span> RIPRODUCI
+          </button>
+          <button id="melody-stop-btn" class="btn btn-secondary" title="Ferma la riproduzione e resetta il cursore all'inizio">
+            <span class="btn-icon">⏹</span> STOP
+          </button>
+
+          <div class="bpm-badge-box">
+            <span>BPM:</span>
+            <span id="melody-bpm-display" class="bpm-number">150</span>
+            <input type="range" id="melody-bpm-input" class="range-slider" min="60" max="240" step="1" value="150" style="width: 90px;">
+            <button id="tap-tempo-btn" class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;" title="Clicca a ritmo per impostare il tempo">TAP</button>
+          </div>
+        </div>
+
+        <div class="tools-group">
+          <select id="steps-selector" class="select-input" title="Durata del pattern">
+            <option value="16">16 Step (1 Battuta)</option>
+            <option value="32">32 Step (2 Battute)</option>
+          </select>
+
+          <select id="melody-template-select" class="select-input" title="Carica pattern melodici intonati">
+            <option value="">✨ Genera da Modello...</option>
+            <option value="euphoric_anthem">🏆 Inno Eufonico (Hardstyle/Trance)</option>
+            <option value="dark_techno_riff">⚡ Riff Dark Techno Ipnotico</option>
+            <option value="cyberpunk_arp">🌆 Arpeggio Cyberpunk Drive</option>
+            <option value="acid_hook">🧪 Hook Acido 303 Groove</option>
+            <option value="ambient_harmony">🌌 Accordo Sostenuto</option>
+          </select>
+
+          <button id="random-melody-btn" class="btn btn-secondary" title="Genera un nuovo riff casuale rigorosamente in scala">
+            🎲 Riff Casuale
+          </button>
+
+          <div style="display:flex; gap:2px;">
+            <button class="btn btn-secondary" data-transpose="-1" title="Trasponi di -1 semitono" style="padding:8px 10px;">-1</button>
+            <button class="btn btn-secondary" data-transpose="1" title="Trasponi di +1 semitono" style="padding:8px 10px;">+1</button>
+            <button class="btn btn-secondary" data-transpose="-12" title="Trasponi un'ottava sotto" style="padding:8px 10px;">-12</button>
+            <button class="btn btn-secondary" data-transpose="12" title="Trasponi un'ottava sopra" style="padding:8px 10px;">+12</button>
+          </div>
+
+          <button id="clear-melody-btn" class="btn btn-secondary" title="Cancella tutte le note">
+            🗑️ Svuota
+          </button>
+        </div>
+      </div>
+
+      <!-- Area Piano Roll Interattiva -->
+      <div class="pianoroll-outer-scroll">
+        <div id="pianoroll-container"></div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TASTIERA VIRTUALE INTERATTIVA (LIVE JAMMING)   -->
+    <!-- ============================================== -->
+    <section class="virtual-keyboard-card">
+      <div class="card-header-row">
+        <div class="card-title-group">
+          <span class="section-icon-badge">🎹</span>
+          <div>
+            <h3 class="section-title">SUONA DAL VIVO CON TASTIERA PC O MOUSE</h3>
+            <p class="section-sub">Tasti PC: <b>A S D F G H J K</b> (bianchi) e <b>W E T Y U</b> (neri). I pallini indicano le note della scala intonata.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="virtual-keyboard-container"></div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="studio-footer">
+      MelodyForge Studio • Progettato per comporre in perfetta armonia con KickForge 303 • Esportazione MIDI & WAV
+    </footer>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- Script Modulare dell'App Melodia -->
+  <script type="module" src="js/melody-app.js"></script>
+</body>
+</html>

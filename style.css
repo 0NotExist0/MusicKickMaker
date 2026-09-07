@@ -2308,3 +2308,81 @@ body {
   }
 }
 
+/* ==========================================================================
+   STUDIO NAVIGATION BAR (COMMUTATORE AMBIENTI KICK & MELODIA)
+   ========================================================================== */
+.studio-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 6px 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.studio-nav-links {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.studio-nav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: var(--font-brand);
+  text-decoration: none;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.studio-nav-tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface-2);
+}
+
+.studio-nav-tab.active {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(245, 158, 11, 0.2));
+  border-color: var(--accent-303);
+  color: #fff;
+  box-shadow: 0 0 14px var(--accent-303-glow);
+}
+
+.studio-nav-tab-melody {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(236, 72, 153, 0.15));
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #e9d5ff;
+}
+
+.studio-nav-tab-melody:hover {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.35), rgba(236, 72, 153, 0.35));
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.5);
+  color: #fff;
+}
+
+.nav-new-pill {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 800;
+  background: #a855f7;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  margin-left: 4px;
+}
+
+.studio-nav-tag {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+

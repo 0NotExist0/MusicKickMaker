@@ -17,6 +17,22 @@
   <div class="app-wrapper">
 
     <!-- ============================================== -->
+    <!-- STUDIO NAVIGATION BAR (COMMUTATORE AMBIENTI)   -->
+    <!-- ============================================== -->
+    <nav class="studio-nav-bar">
+      <div class="studio-nav-links">
+        <a href="index.html" class="studio-nav-tab active" title="Studio Cassa & Basso 303">
+          <span>🥁</span> KICK & BASS FORGE
+        </a>
+        <a href="melodia/index.html" class="studio-nav-tab studio-nav-tab-melody" onclick="try{const b=document.getElementById('bpm-input');if(b)localStorage.setItem('kickforge_last_bpm',b.value);const n=document.querySelector('.bass-note-select');if(n){const m=n.value.match(/^([A-G]#?)/);if(m)localStorage.setItem('kickforge_last_tuning',m[1]);}}catch(e){}" title="Passa a comporre melodie intonate ai kick">
+          <span>🎹</span> PASSA A MELODIA STUDIO
+          <span class="nav-new-pill">NUOVO</span>
+        </a>
+      </div>
+      <span class="studio-nav-tag">STUDIO COMPLETO HARDCORE & TECHNO</span>
+    </nav>
+
+    <!-- ============================================== -->
     <!-- INTESTAZIONE PRINCIPALE & AZIONI RAPIDE        -->
     <!-- ============================================== -->
     <header class="top-header">
@@ -49,6 +65,9 @@
         <button id="open-export-modal-btn" class="btn btn-primary btn-glow" title="Scarica il file audio WAV da usare nel tuo programma musicale">
           <span class="btn-icon">⬇</span> SCARICA AUDIO (.WAV)
         </button>
+        <a href="melodia/index.html" class="btn btn-secondary studio-nav-tab-melody" onclick="try{const b=document.getElementById('bpm-input');if(b)localStorage.setItem('kickforge_last_bpm',b.value);const n=document.querySelector('.bass-note-select');if(n){const m=n.value.match(/^([A-G]#?)/);if(m)localStorage.setItem('kickforge_last_tuning',m[1]);}}catch(e){}" title="Passa allo Studio Melodia per comporre melodie intonate con i kick">
+          <span class="btn-icon">🎹</span> PASSA A MELODIA
+        </a>
       </div>
     </header>
 
